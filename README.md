@@ -1,71 +1,119 @@
-# floppyformatte
+# Floppy Workbench
 
-USB disket emülatörü (Gotek / HxC / ipcas-WCH sınıfı) için **çapraz-platform yönetim uygulaması**.
-Rust ile yazılmış; FAT12 disket imajları oluşturur/biçimlendirir, blokları (disket slotlarını) yönetir ve görüntüler.
+**English** · [Türkçe](README.tr.md)
 
-> Tasarım/analiz dokümanı: [`TEKNIK_RAPOR.md`](TEKNIK_RAPOR.md)
+A cross-platform desktop app and CLI for managing **USB floppy‑disk emulators** of the
+**SFR1M44‑U100 / Alfais 4408** family (sold under many names). It formats a plain USB stick
+into the raw layout these devices expect, and lets you browse, edit, and manage the stored
+floppies through a file‑explorer UI.
 
-## Workspace yapısı
+> Those industrial emulators plug into a machine's 34‑pin floppy connector and read a USB
+> stick that has been split into up to 100 fixed‑size **floppy "banks"**, each a full 1.44 MB
+> FAT12 floppy image. Floppy Workbench creates and manages that layout.
+
+Built with **Rust** (core + CLI) and **Tauri 2** (GUI). The FAT12 formatter is validated
+against the independent [`fatfs`](https://crates.io/crates/fatfs) crate.
+
+---
+
+## Features
+
+### Format
+- Split a USB stick into **N** evenly‑sized floppy banks (1.44 MB / 1.2 MB / 720 KB, FAT12).
+- Write directly to the device, or build a raw `usb.img` to flash with Rufus / `dd`.
+- Per‑block quick‑format and volume‑label editing.
+
+### Contents — a real file explorer
+- Two‑pane layout: the blocks on the left, the selected floppy's files on the right.
+- **Navigate folders** with a breadcrumb; enter / go up.
+- **Add files** (drag‑and‑drop or a native file dialog), **New folder**.
+- **Cut / Copy / Paste** across folders and across blocks (recursive for folders).
+- **Rename**, **Delete** (recursive), **Export** to your PC (native "Save as…" dialog).
+- **Preview** text and image files in‑app (double‑click).
+- A **details panel** for the selected item.
+
+### Advanced
+- Build a multi‑bank USB image file, write an existing image, or format a single floppy image.
+
+### CLI (`floppyctl`)
+```sh
+floppyctl format   --size 1.44 --label MYDISK --out disk.img [--add FILE]
+floppyctl info     disk.img
+floppyctl build-usb --out usb.img --banks 100 --bank 0:1.44:BOOTDISK --add-to 0:readme.txt
+floppyctl list-usb
+floppyctl read-bank --drive 3 --index 0        # or --image usb.img --index 0
+floppyctl write-usb --image usb.img --index <IDX> --yes   # destructive
+```
+
+---
+
+## Device layout (SFR1M44‑U100)
+
+Reverse‑engineered and reproduced by this tool:
+
+- The USB is a flat sequence of **1.5 MiB banks**; bank *N* starts at offset `N × 0x180000`.
+- The first **1,474,560 bytes** of each bank is a standard 1.44 MB FAT12 floppy; the rest is
+  zero padding.
+- There is **no partition table** — the device selects a bank by index (front‑panel display).
+- U100 = 100 banks; U100K = 1000 banks. Windows mounts only bank 000 (offset 0).
+
+See [`TEKNIK_RAPOR.md`](TEKNIK_RAPOR.md) (Turkish) for the full technical report.
+
+---
+
+## Requirements
+
+- **Windows** (the GUI and direct device I/O are Windows‑only for now).
+- **Administrator** privileges to read/write the raw USB device.
+- **WebView2** runtime (preinstalled on Windows 11).
+- To build: a recent **Rust** toolchain and **Node** (only the Tauri CLI prerequisites; the
+  frontend itself is dependency‑free vanilla HTML).
+
+## Build & run
+
+```sh
+# core tests
+cargo test
+
+# CLI
+cargo run -p floppyctl -- info disk.img
+
+# GUI (run the built exe as Administrator for device access)
+cargo build --release -p floppy-gui
+# → target/release/floppy-gui.exe   (single portable file, ~6 MB)
+```
+
+---
+
+## Project structure
 
 ```
 crates/
-├─ fat12/        Çekirdek: FAT12 imaj formatlayıcı (platformdan bağımsız)
-├─ floppyctl/    CLI + blok seti yöneticisi (dosya-tabanlı)
-└─ floppy-gui/   Tauri masaüstü arayüzü (Windows/Linux/macOS)
+├─ fat12/      FAT12 image formatter (geometry, boot/FAT/root, bootable, label, file ops)
+├─ floppyctl/  CLI + core: SFR1M44 bank layout, raw device I/O, path‑based fs operations
+└─ floppy-gui/ Tauri 2 desktop app (frameless, npm‑free vanilla frontend)
 ```
 
-### `fat12` (çekirdek kütüphane)
-- `Geometry::for_format(FloppyFormat)` — 720K / 1.2M / 1.44M tam BPB geometrisi
-- `format_image(format, label, serial)` / `format_image_with(format, &FormatOptions)`
-- `add_file(&mut img, path, data)` — imaja dosya ekleme (`fatfs` üzerinden)
-- `make_bootable(...)` — boot kodu + sistem dosyalarıyla bootable disket (FreeDOS önerilir)
-- Doğrulama: bağımsız `fatfs` crate'iyle round-trip testleri
+## Safety
 
-### `floppyctl` (CLI)
-```
-floppyctl format --size 1.44 --label MYDISK --out disk.img [--add FILE]
-floppyctl info disk.img
-floppyctl set-add  --dir <usb_root> --index 0 --size 1.44 --label BOOT [--naming gotek|ipcas]
-floppyctl set-list --dir <usb_root> [--naming gotek|ipcas]
+Writing to a physical drive is **destructive and irreversible**. Floppy Workbench only lists
+**removable** drives, re‑verifies the target device number before every write, and asks for
+confirmation — the system disk can never be targeted by accident. Even so, **test on a
+spare USB stick first**, and double‑check the selected drive.
 
-# SFR1M44-U100 (Alfais 4408) için ham USB imajı — bankalar 1.5 MiB ofsetlerde
-floppyctl build-usb --out usb.img --banks 100 --bank 0:1.44:BOOTDISK --bank 2:1.44:GAMES \
-                    --add-to 0:bootfiles/readme.txt
-# Sonra: usb.img'i Rufus/Win32DiskImager/dd ile USB'ye yaz, cihaza tak.
+## Status
 
-# VEYA doğrudan USB'ye yaz (YIKICI, yalnızca removable, Windows, Admin gerekir):
-floppyctl list-usb
-floppyctl write-usb --image usb.img --index <IDX> --yes
-```
-- `sfr` — **SFR1M44-U100 (Alfais 4408) ham USB yerleşimi** (bankalar `N×0x180000` ofsette, her banka 1.44MB FAT12). **Bu cihaz için doğru model.**
-- `blockset::BlockSet` — dosya-tabanlı emülatörler için (Gotek `DSKA0000.IMG` / ipcas `FLOPPY000.IMG`). *Not: SFR1M44 bunu kullanmaz.*
+The FAT12 core and device layout are covered by tests and validated against an independent
+FAT implementation. Removable‑drive detection has been verified against real hardware;
+**the raw write/read path has not yet been verified end‑to‑end on a physical device** — treat
+the destructive operations as experimental until you confirm them with your own emulator.
 
-### `floppy-gui` (Tauri)
-- **SFR1M44 USB imajı paneli:** bankaları tanımla → ham `usb.img` üret
-- **Doğrudan USB'ye yazma:** removable sürücü seçimi + onaylı yazma (Admin gerekir)
-- Blok listesi/formatlama (dosya-tabanlı emülatörler için)
-- npm gerektirmez (vanilla HTML + `withGlobalTauri`), saf `cargo` ile derlenir
+## License
 
-### `device` (güvenlik katmanı)
-- `list_usb_drives()` — yalnızca removable/USB sürücüleri listeler (sistem diski asla)
-- `check_write_target()` — removable + boyut doğrulaması (yıkıcı yazma kapısı, test edilir)
-- `write_image_to_drive()` — Windows ham yazma: volume kilitle/çıkar + açılan handle'ın cihaz numarasını yeniden doğrula
+MIT.
 
-## Geliştirme
+## Acknowledgements
 
-```bash
-cargo test            # tüm testler
-cargo clippy --all-targets
-cargo run -p floppyctl -- info disk.img
-cargo run -p floppy-gui        # masaüstü arayüzü (WebView2 gerekir)
-```
-
-## Durum
-- [x] FAT12 formatlayıcı çekirdeği (720K/1.2M/1.44M) — TDD, round-trip doğrulamalı
-- [x] Bootable disk altyapısı (boot kodu + sistem dosyası yerleştirme)
-- [x] CLI (format / info / set-add / set-list)
-- [x] Dosya-tabanlı blok yöneticisi (Gotek & ipcas adlandırma)
-- [x] Tauri GUI iskeleti
-- [ ] Gerçek FreeDOS boot dosyalarının paketlenmesi
-- [ ] Ham-blok (WCH çipli cihaz) erişimi — donanım modeli doğrulanınca
-- [ ] Upload/download, imaj import/export, yedekleme (GUI)
+The device layout was informed by community reverse‑engineering of the SFR1M44‑U100K, and the
+FAT12 output is cross‑checked with the `fatfs` crate. Not affiliated with WCH, ipcas, Gotek,
+or Alfais.
