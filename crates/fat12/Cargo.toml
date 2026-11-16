@@ -1,0 +1,13 @@
+[package]
+name = "fat12"
+version.workspace = true
+edition.workspace = true
+license.workspace = true
+description = "FAT12 floppy disk image formatter (core library for a USB floppy emulator manager)"
+
+[dependencies]
+# FAT filesystem driver: used for file-level operations (add_file, placing
+# bootable system files) on top of our own precise low-level formatter.
+fatfs = "0.3.6"
+
+[dev-dependencies]

@@ -1,0 +1,34 @@
+[package]
+name = "floppyctl"
+version.workspace = true
+edition.workspace = true
+license.workspace = true
+description = "Command-line tool to create and inspect FAT12 floppy images"
+
+[lib]
+name = "floppyctl"
+path = "src/lib.rs"
+
+[[bin]]
+name = "floppyctl"
+path = "src/main.rs"
+
+[dependencies]
+fat12 = { path = "../fat12" }
+clap = { version = "4.5.21", features = ["derive"] }
+anyhow = "1.0.93"
+fatfs = "0.3.6"
+serde = { version = "1", features = ["derive"] }
+serde_json = "1"
+
+[target.'cfg(windows)'.dependencies]
+windows = { version = "0.58.0", features = [
+    "Win32_Foundation",
+    "Win32_Security",
+    "Win32_Storage_FileSystem",
+    "Win32_System_IO",
+    "Win32_System_Ioctl",
+] }
+
+[dev-dependencies]
+tempfile = "3.14.0"

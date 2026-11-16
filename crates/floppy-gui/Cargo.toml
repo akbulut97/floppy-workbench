@@ -1,0 +1,18 @@
+[package]
+name = "floppy-gui"
+version.workspace = true
+edition.workspace = true
+license.workspace = true
+description = "Tauri desktop GUI for the USB floppy emulator manager"
+
+[build-dependencies]
+tauri-build = { version = "2", features = [] }
+
+[dependencies]
+tauri = { version = "2", features = [] }
+tauri-plugin-dialog = "2"
+serde = { version = "1", features = ["derive"] }
+serde_json = "1"
+base64 = "0.22.1"
+fat12 = { path = "../fat12" }
+floppyctl = { path = "../floppyctl" }
