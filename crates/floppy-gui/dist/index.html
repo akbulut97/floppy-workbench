@@ -310,6 +310,16 @@
       .ctx button.danger-item { color: var(--danger); }
       .ctx button.danger-item:hover { background: var(--danger-soft); }
 
+      .settings-pop {
+        position: fixed; top: 74px; right: 16px; z-index: 65;
+        background: var(--panel-2); border: 1px solid var(--line); border-radius: 10px;
+        padding: 12px 14px; box-shadow: 0 12px 30px rgba(0, 0, 0, 0.4); min-width: 210px;
+      }
+      .settings-pop[hidden] { display: none; }
+      .settings-pop h4 { margin: 0 0 10px; font-size: 11px; font-weight: 600; color: var(--muted); text-transform: uppercase; letter-spacing: 0.5px; }
+      .set-row { display: flex; align-items: center; justify-content: space-between; gap: 12px; font-size: 13px; }
+      .set-row select { min-width: 120px; }
+
       .crumbs { display: flex; align-items: center; gap: 2px; flex-wrap: wrap; font-size: 13px; }
       .crumbs a { color: var(--amber); cursor: pointer; text-decoration: none; }
       .crumbs a:hover { text-decoration: underline; }
@@ -414,26 +424,38 @@
       </div>
       <div class="device-pick">
         <span class="dot" id="devDot"></span>
-        <select id="device"><option value="">No device</option></select>
-        <button class="ghost" id="devRefresh" title="Rescan drives">Rescan</button>
+        <select id="device"><option value="" data-i18n="dev.none">No device</option></select>
+        <button class="ghost" id="devRefresh" data-i18n="dev.rescan" data-i18n-title="dev.rescanTitle" title="Rescan drives">Rescan</button>
+        <button class="ghost" id="settingsBtn" title="Settings" aria-label="Settings" data-i18n-title="settings.title" style="padding:7px 10px">⚙</button>
       </div>
     </header>
 
+    <div id="settingsPanel" class="settings-pop" hidden>
+      <h4 data-i18n="settings.title">Settings</h4>
+      <label class="set-row">
+        <span data-i18n="settings.language">Language</span>
+        <select id="langSel">
+          <option value="en">English</option>
+          <option value="tr">Türkçe</option>
+        </select>
+      </label>
+    </div>
+
     <nav class="tabs" role="tablist">
-      <button role="tab" aria-selected="true" data-tab="format">Format</button>
-      <button role="tab" aria-selected="false" data-tab="browse">Contents</button>
-      <button role="tab" aria-selected="false" data-tab="advanced">Advanced</button>
+      <button role="tab" aria-selected="true" data-tab="format" data-i18n="tab.format">Format</button>
+      <button role="tab" aria-selected="false" data-tab="browse" data-i18n="tab.contents">Contents</button>
+      <button role="tab" aria-selected="false" data-tab="advanced" data-i18n="tab.advanced">Advanced</button>
     </nav>
 
     <main>
       <!-- ============ FORMAT ============ -->
       <section class="tab active" id="tab-format">
-        <h2>Format the USB</h2>
-        <p class="lead">Divide the selected USB into evenly sized floppy blocks the emulator can switch between.</p>
+        <h2 data-i18n="format.title">Format the USB</h2>
+        <p class="lead" data-i18n="format.lead">Divide the selected USB into evenly sized floppy blocks the emulator can switch between.</p>
 
         <div class="card">
           <div class="field">
-            <span class="lbl">Floppy format</span>
+            <span class="lbl" data-i18n="format.floppyFormat">Floppy format</span>
             <div class="disks" id="fmtDisks">
               <label class="disk"><input type="radio" name="fmtSize" value="1.44" checked />
                 <svg viewBox="0 0 24 24" fill="none"><rect x="4" y="3" width="16" height="18" rx="1.5" stroke="currentColor" stroke-width="1.5"/><rect x="7" y="3" width="10" height="6" fill="currentColor"/></svg>
@@ -449,71 +471,71 @@
 
           <div class="inline" style="gap: 20px">
             <label class="field" style="margin: 0">
-              <span class="lbl">Number of floppies</span>
+              <span class="lbl" data-i18n="format.numFloppies">Number of floppies</span>
               <select id="fmtBanks">
                 <option>10</option><option>50</option><option selected>100</option>
                 <option>250</option><option>1000</option>
               </select>
             </label>
             <label class="field" style="margin: 0">
-              <span class="lbl">Options</span>
-              <label style="font-size: 13px"><input type="checkbox" id="fmtQuick" checked /> Quick format</label>
+              <span class="lbl" data-i18n="format.options">Options</span>
+              <label style="font-size: 13px"><input type="checkbox" id="fmtQuick" checked /> <span data-i18n="format.quick">Quick format</span></label>
             </label>
           </div>
 
           <div class="sep"></div>
           <div class="inline" style="justify-content: space-between">
             <span class="note" id="fmtSummary">Ready.</span>
-            <button class="danger" id="fmtBegin">Begin to format</button>
+            <button class="danger" id="fmtBegin" data-i18n="format.begin">Begin to format</button>
           </div>
-          <p class="warn">Erases the entire USB. Only removable drives are listed. Needs Administrator.</p>
+          <p class="warn" data-i18n="format.warn">Erases the entire USB. Only removable drives are listed. Needs Administrator.</p>
           <p class="status" id="fmtStatus"></p>
         </div>
 
-        <p class="note">
+        <p class="note" data-i18n="format.bootNote">
           Bootable DOS floppies need FreeDOS system files, which aren't bundled yet. Prefer not to write directly?
-          Build an image file under <b>Advanced</b> and flash it with Rufus or dd.
+          Build an image file under Advanced and flash it with Rufus or dd.
         </p>
       </section>
 
       <!-- ============ BROWSE ============ -->
       <section class="tab" id="tab-browse">
-        <h2>Browse blocks</h2>
-        <p class="lead">Each block is one floppy on the USB. Pick a block to see its files, then drag files in.</p>
+        <h2 data-i18n="browse.title">Browse blocks</h2>
+        <p class="lead" data-i18n="browse.lead">Each block is one floppy on the USB. Pick a block to see its files, then drag files in.</p>
 
         <div class="explorer">
           <aside class="blocks-pane">
             <div class="blocks-head">
-              <span>Blocks</span>
+              <span data-i18n="browse.blocks">Blocks</span>
               <span class="inline" style="gap: 6px">
-                <input type="number" id="blockCount" value="100" min="1" max="1000" style="width: 66px" title="How many blocks to list" />
-                <button class="ghost" id="scanBtn">Scan</button>
+                <input type="number" id="blockCount" value="100" min="1" max="1000" style="width: 66px" data-i18n-title="browse.countTitle" title="How many blocks to list" />
+                <button class="ghost" id="scanBtn" data-i18n="browse.scan">Scan</button>
               </span>
             </div>
-            <ul class="blocks-list" id="blocksList"><li class="mini-empty">Choose a USB, then Scan.</li></ul>
+            <ul class="blocks-list" id="blocksList"><li class="mini-empty" data-i18n="browse.chooseScan">Choose a USB, then Scan.</li></ul>
           </aside>
 
           <div class="files-pane">
             <div class="pane-top">
               <div class="pane-head" id="paneHead">
-                <nav class="crumbs" id="crumbs"><span style="color: var(--muted)">No block selected</span></nav>
+                <nav class="crumbs" id="crumbs"><span style="color: var(--muted)" data-i18n="browse.noBlock">No block selected</span></nav>
                 <span class="mono" id="paneMeta" style="color: var(--muted)"></span>
               </div>
               <div class="pane-tools">
-                <button class="ghost" id="upBtn" disabled title="Up one folder">↑</button>
-                <button class="ghost" id="addBtn" disabled title="Add files from your PC">Add files</button>
-                <button class="ghost" id="newFolderBtn" disabled title="New folder">New folder</button>
-                <button class="ghost" id="renameBtn" disabled title="Rename selected (F2)">Rename</button>
-                <button class="ghost" id="pasteBtn" disabled title="Paste (Ctrl+V)">Paste</button>
-                <button class="ghost" id="exportBtn" disabled title="Save selected files to your PC">Export</button>
-                <button class="ghost del" id="deleteBtn" disabled title="Delete selected (Del)">Delete</button>
+                <button class="ghost" id="upBtn" disabled data-i18n-title="tb.up" title="Up one folder">↑</button>
+                <button class="ghost" id="addBtn" disabled data-i18n="tb.add" data-i18n-title="tb.addTitle" title="Add files from your PC">Add files</button>
+                <button class="ghost" id="newFolderBtn" disabled data-i18n="tb.newFolder" data-i18n-title="tb.newFolder" title="New folder">New folder</button>
+                <button class="ghost" id="renameBtn" disabled data-i18n="tb.rename" data-i18n-title="tb.renameTitle" title="Rename selected (F2)">Rename</button>
+                <button class="ghost" id="pasteBtn" disabled data-i18n="tb.paste" data-i18n-title="tb.pasteTitle" title="Paste (Ctrl+V)">Paste</button>
+                <button class="ghost" id="exportBtn" disabled data-i18n="tb.export" data-i18n-title="tb.exportTitle" title="Save selected files to your PC">Export</button>
+                <button class="ghost del" id="deleteBtn" disabled data-i18n="tb.delete" data-i18n-title="tb.deleteTitle" title="Delete selected (Del)">Delete</button>
               </div>
             </div>
-            <div id="readResult"><div class="empty">Select a block on the left.</div></div>
+            <div id="readResult"><div class="empty" data-i18n="browse.selectLeft">Select a block on the left.</div></div>
             <div id="details" class="details" hidden></div>
             <div class="dropzone" id="dropzone" data-active="false">
               <svg viewBox="0 0 24 24" fill="none" aria-hidden="true"><path d="M12 15V4m0 0 4 4m-4-4L8 8" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/><path d="M4 15v3a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-3" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"/></svg>
-              <span>Drop files here to add them to <b id="dropBlock">—</b></span>
+              <span><span data-i18n="browse.dropHere">Drop files here to add them to</span> <b id="dropBlock">—</b></span>
             </div>
             <p class="status" id="readStatus"></p>
           </div>
@@ -522,50 +544,50 @@
 
       <!-- ============ ADVANCED ============ -->
       <section class="tab" id="tab-advanced">
-        <h2>Advanced</h2>
-        <p class="lead">Build image files bank by bank, write an existing image, or format a single floppy image.</p>
+        <h2 data-i18n="tab.advanced">Advanced</h2>
+        <p class="lead" data-i18n="adv.lead">Build image files bank by bank, write an existing image, or format a single floppy image.</p>
 
         <div class="card">
-          <h3>Build a USB image file</h3>
+          <h3 data-i18n="adv.build">Build a USB image file</h3>
           <div class="inline">
             <label class="field" style="margin: 0; flex: 1">
-              <span class="lbl">Output path</span>
+              <span class="lbl" data-i18n="adv.outPath">Output path</span>
               <input id="sfrOut" placeholder="C:\path\usb.img" style="width: 100%" />
             </label>
             <label class="field" style="margin: 0">
-              <span class="lbl">Total banks</span>
+              <span class="lbl" data-i18n="adv.totalBanks">Total banks</span>
               <input id="sfrBanks" type="number" value="100" min="1" max="1000" style="width: 100px" />
             </label>
           </div>
-          <table><thead><tr><th>Index</th><th>Size</th><th>Label</th><th></th></tr></thead>
+          <table><thead><tr><th data-i18n="adv.index">Index</th><th data-i18n="adv.size">Size</th><th data-i18n="adv.label">Label</th><th></th></tr></thead>
             <tbody id="sfrRows"></tbody></table>
           <div class="inline" style="margin-top: 10px; justify-content: space-between">
-            <button class="ghost" id="sfrAddRow">Add bank</button>
-            <button id="sfrBuild">Build image</button>
+            <button class="ghost" id="sfrAddRow" data-i18n="adv.addBank">Add bank</button>
+            <button id="sfrBuild" data-i18n="adv.buildImage">Build image</button>
           </div>
           <p class="status" id="sfrStatus"></p>
         </div>
 
         <div class="card">
-          <h3>Write an image to the USB</h3>
+          <h3 data-i18n="adv.writeTitle">Write an image to the USB</h3>
           <label class="field">
-            <span class="lbl">Image file</span>
+            <span class="lbl" data-i18n="adv.imageFile">Image file</span>
             <input id="writeImg" placeholder="C:\path\usb.img" style="width: 100%" />
           </label>
-          <button class="danger" id="writeBtn">Write to selected USB</button>
-          <p class="warn">Writes to the device chosen in the top bar and erases it. Needs Administrator.</p>
+          <button class="danger" id="writeBtn" data-i18n="adv.writeBtn">Write to selected USB</button>
+          <p class="warn" data-i18n="adv.writeWarn">Writes to the device chosen in the top bar and erases it. Needs Administrator.</p>
           <p class="status" id="writeStatus"></p>
         </div>
 
         <div class="card">
-          <h3>Format a single floppy image</h3>
+          <h3 data-i18n="adv.oneTitle">Format a single floppy image</h3>
           <div class="inline">
             <label class="field" style="margin: 0; flex: 1">
-              <span class="lbl">Output .img</span>
+              <span class="lbl" data-i18n="adv.outImg">Output .img</span>
               <input id="oneOut" placeholder="C:\path\disk.img" style="width: 100%" />
             </label>
             <label class="field" style="margin: 0">
-              <span class="lbl">Size</span>
+              <span class="lbl" data-i18n="adv.size">Size</span>
               <div class="seg">
                 <label><input type="radio" name="oneSize" value="1.44" checked />1.44M</label>
                 <label><input type="radio" name="oneSize" value="1.2" />1.2M</label>
@@ -573,30 +595,30 @@
               </div>
             </label>
             <label class="field" style="margin: 0">
-              <span class="lbl">Label</span>
+              <span class="lbl" data-i18n="adv.label">Label</span>
               <input id="oneLabel" value="NO NAME" maxlength="11" style="width: 120px" />
             </label>
           </div>
-          <button id="oneBuild">Create image</button>
+          <button id="oneBuild" data-i18n="adv.createImage">Create image</button>
           <p class="status" id="oneStatus"></p>
         </div>
       </section>
     </main>
 
     <div id="ctxMenu" class="ctx" hidden>
-      <button data-act="open">Open</button>
-      <button data-act="cut">Cut</button>
-      <button data-act="copy">Copy</button>
-      <button data-act="paste">Paste</button>
-      <button data-act="rename">Rename</button>
-      <button data-act="export">Export</button>
-      <button data-act="delete" class="danger-item">Delete</button>
+      <button data-act="open" data-i18n="ctx.open">Open</button>
+      <button data-act="cut" data-i18n="ctx.cut">Cut</button>
+      <button data-act="copy" data-i18n="ctx.copy">Copy</button>
+      <button data-act="paste" data-i18n="ctx.paste">Paste</button>
+      <button data-act="rename" data-i18n="ctx.rename">Rename</button>
+      <button data-act="export" data-i18n="ctx.export">Export</button>
+      <button data-act="delete" class="danger-item" data-i18n="ctx.delete">Delete</button>
     </div>
 
     <div id="blockCtx" class="ctx" hidden>
-      <button data-bact="open">Open</button>
-      <button data-bact="rename">Rename block…</button>
-      <button data-bact="format" class="danger-item">Format block…</button>
+      <button data-bact="open" data-i18n="ctx.open">Open</button>
+      <button data-bact="rename" data-i18n="bctx.rename">Rename block…</button>
+      <button data-bact="format" class="danger-item" data-i18n="bctx.format">Format block…</button>
     </div>
 
     <div class="rz rz-n" data-dir="North"></div>
@@ -613,8 +635,8 @@
         <div class="modal-head">
           <span class="modal-title" id="pvTitle">Preview</span>
           <span class="inline" style="gap: 8px">
-            <button class="ghost" id="pvExport">Save as…</button>
-            <button class="ghost" id="pvClose">Close</button>
+            <button class="ghost" id="pvExport" data-i18n="pv.saveAs">Save as…</button>
+            <button class="ghost" id="pvClose" data-i18n="pv.close">Close</button>
           </span>
         </div>
         <div class="modal-body" id="pvBody"></div>
@@ -628,6 +650,154 @@
       const gb = (n) => (n / 1073741824).toFixed(2) + " G";
 
       function setStatus(el, msg, kind) { el.textContent = msg; el.className = "status " + (kind || ""); }
+
+      // ---- i18n ----
+      const I18N = {
+        en: {
+          "dev.none": "No device", "dev.rescan": "Rescan", "dev.rescanTitle": "Rescan drives",
+          "settings.title": "Settings", "settings.language": "Language",
+          "tab.format": "Format", "tab.contents": "Contents", "tab.advanced": "Advanced",
+          "format.title": "Format the USB",
+          "format.lead": "Divide the selected USB into evenly sized floppy blocks the emulator can switch between.",
+          "format.floppyFormat": "Floppy format", "format.numFloppies": "Number of floppies",
+          "format.options": "Options", "format.quick": "Quick format", "format.begin": "Begin to format",
+          "format.warn": "Erases the entire USB. Only removable drives are listed. Needs Administrator.",
+          "format.bootNote": "Bootable DOS floppies need FreeDOS system files, which aren't bundled yet. Prefer not to write directly? Build an image file under Advanced and flash it with Rufus or dd.",
+          "browse.title": "Browse blocks",
+          "browse.lead": "Each block is one floppy on the USB. Pick a block to see its files, then drag files in.",
+          "browse.blocks": "Blocks", "browse.scan": "Scan", "browse.countTitle": "How many blocks to list",
+          "browse.chooseScan": "Choose a USB, then Scan.", "browse.noBlock": "No block selected",
+          "browse.selectLeft": "Select a block on the left.", "browse.dropHere": "Drop files here to add them to",
+          "tb.up": "Up one folder", "tb.add": "Add files", "tb.addTitle": "Add files from your PC",
+          "tb.newFolder": "New folder", "tb.rename": "Rename", "tb.renameTitle": "Rename selected (F2)",
+          "tb.paste": "Paste", "tb.pasteTitle": "Paste (Ctrl+V)", "tb.export": "Export",
+          "tb.exportTitle": "Save selected files to your PC", "tb.delete": "Delete", "tb.deleteTitle": "Delete selected (Del)",
+          "adv.lead": "Build image files bank by bank, write an existing image, or format a single floppy image.",
+          "adv.build": "Build a USB image file", "adv.outPath": "Output path", "adv.totalBanks": "Total banks",
+          "adv.index": "Index", "adv.size": "Size", "adv.label": "Label", "adv.addBank": "Add bank",
+          "adv.buildImage": "Build image", "adv.writeTitle": "Write an image to the USB", "adv.imageFile": "Image file",
+          "adv.writeBtn": "Write to selected USB",
+          "adv.writeWarn": "Writes to the device chosen in the top bar and erases it. Needs Administrator.",
+          "adv.oneTitle": "Format a single floppy image", "adv.outImg": "Output .img", "adv.createImage": "Create image",
+          "ctx.open": "Open", "ctx.cut": "Cut", "ctx.copy": "Copy", "ctx.paste": "Paste", "ctx.rename": "Rename",
+          "ctx.export": "Export", "ctx.delete": "Delete", "bctx.rename": "Rename block…", "bctx.format": "Format block…",
+          "pv.saveAs": "Save as…", "pv.close": "Close", "col.name": "Name", "col.bytes": "Bytes",
+          "dyn.noRemovable": "No removable drive", "dyn.error": "error",
+          "dyn.summary": "{n} × {size}M floppies", "dyn.chooseTop": "Choose a USB in the top bar.",
+          "dyn.pressScan": "Press Scan to list blocks.",
+          "dyn.formatConfirm": "Erase {model} and write {banks} blank {size}M floppies?\n\nThis cannot be undone.",
+          "dyn.formatting": "Formatting {banks} floppies — do not remove the drive…",
+          "dyn.wroteSafe": "{msg} — safe to eject.",
+          "dyn.loading": "Loading…", "dyn.working": "Working…", "dyn.unlabeled": "unlabeled",
+          "dyn.notFormatted": "This block isn’t formatted.",
+          "dyn.emptyFolder": "Empty folder. Drop files below, or make a folder.",
+          "dyn.chooseFirst": "Choose a USB first.", "dyn.scanning": "Scanning…",
+          "dyn.noBlocks": "No blocks found (format first).", "dyn.noLabel": "(no label)", "dyn.blank": "blank",
+          "dyn.folder": "Folder", "dyn.file": "File", "dyn.block": "Block", "dyn.thisFloppy": "this floppy",
+          "dyn.newFolderPrompt": "New folder name:", "dyn.created": "Created “{name}”.",
+          "dyn.renamePrompt": "Rename to:", "dyn.renamed": "Renamed to “{name}”.",
+          "dyn.deleteConfirm": "Delete {n} item(s)? Folders are removed with everything inside.\n\n{list}",
+          "dyn.deleted": "Deleted {n} item(s).", "dyn.folderNoExport": "Folders can’t be exported.",
+          "dyn.saved1": "Saved → {dest}", "dyn.chooseDestFolder": "Choose a destination folder",
+          "dyn.savedN": "Saved {n} file(s) → {dest}", "dyn.truncated": "\n\n… (truncated — open the exported file for the rest)",
+          "dyn.binary": "Binary file · {size} bytes. Use “Save as…” to export it.",
+          "dyn.addFilesTitle": "Add files to this folder",
+          "dyn.useDragDrop": "Drag & drop files onto the drop zone to add them.", "dyn.added": "Added {n} file(s).",
+          "dyn.copied": "Copied {n} item(s). Go to a folder and Paste.", "dyn.cutMsg": "Cut {n} item(s). Go to a folder and Paste.",
+          "dyn.pasting": "Pasting…", "dyn.pasted": "Pasted {n} item(s).",
+          "dyn.selectBlockFirst": "Select a block on the left first.", "dyn.adding": "Adding {n} file(s)…",
+          "dyn.blockLabelPrompt": "Block label (max 11 chars):", "dyn.blockLabeled": "Block {i} labeled “{nl}”.",
+          "dyn.formatBlockConfirm": "Format block {i} as a blank 1.44M floppy? Everything on it is erased.",
+          "dyn.newLabelPrompt": "New label (optional):", "dyn.blockFormatted": "Block {i} formatted.",
+          "dyn.setOutPath": "Set an output path.", "dyn.wrote": "Wrote {msg}",
+          "dyn.setImagePath": "Set the image file path.", "dyn.writeConfirm": "Erase {model} and write {path}?",
+          "dyn.writingDrive": "Writing — do not remove the drive…", "dyn.createdFile": "Created {path} ({size})."
+        },
+        tr: {
+          "dev.none": "Cihaz yok", "dev.rescan": "Yeniden Tara", "dev.rescanTitle": "Sürücüleri yeniden tara",
+          "settings.title": "Ayarlar", "settings.language": "Dil",
+          "tab.format": "Formatla", "tab.contents": "İçerik", "tab.advanced": "Gelişmiş",
+          "format.title": "USB'yi Formatla",
+          "format.lead": "Seçili USB'yi, emülatörün geçiş yapabileceği eşit boyutlu disket bloklarına bölün.",
+          "format.floppyFormat": "Disket biçimi", "format.numFloppies": "Disket sayısı",
+          "format.options": "Seçenekler", "format.quick": "Hızlı format", "format.begin": "Formatlamaya başla",
+          "format.warn": "Tüm USB'yi siler. Yalnızca çıkarılabilir sürücüler listelenir. Yönetici gerekir.",
+          "format.bootNote": "Açılabilir DOS disketleri için FreeDOS sistem dosyaları gerekir (henüz pakete dahil değil). Doğrudan yazmak istemiyorsanız Gelişmiş sekmesinde bir imaj dosyası oluşturup Rufus veya dd ile yazın.",
+          "browse.title": "Blokları gözat",
+          "browse.lead": "Her blok, USB'deki bir diskettir. Dosyalarını görmek için bir blok seçin, sonra dosyaları sürükleyin.",
+          "browse.blocks": "Bloklar", "browse.scan": "Tara", "browse.countTitle": "Kaç blok listelensin",
+          "browse.chooseScan": "Bir USB seçin, sonra Tara'ya basın.", "browse.noBlock": "Blok seçilmedi",
+          "browse.selectLeft": "Soldan bir blok seçin.", "browse.dropHere": "Dosyaları buraya bırakın —",
+          "tb.up": "Bir üst klasör", "tb.add": "Dosya ekle", "tb.addTitle": "PC'den dosya ekle",
+          "tb.newFolder": "Yeni klasör", "tb.rename": "Yeniden adlandır", "tb.renameTitle": "Seçiliyi yeniden adlandır (F2)",
+          "tb.paste": "Yapıştır", "tb.pasteTitle": "Yapıştır (Ctrl+V)", "tb.export": "Dışa aktar",
+          "tb.exportTitle": "Seçili dosyaları PC'ye kaydet", "tb.delete": "Sil", "tb.deleteTitle": "Seçiliyi sil (Del)",
+          "adv.lead": "Banka banka imaj dosyaları oluşturun, mevcut bir imajı yazın veya tek bir disket imajı formatlayın.",
+          "adv.build": "USB imaj dosyası oluştur", "adv.outPath": "Çıktı yolu", "adv.totalBanks": "Toplam banka",
+          "adv.index": "İndeks", "adv.size": "Boyut", "adv.label": "Etiket", "adv.addBank": "Banka ekle",
+          "adv.buildImage": "İmaj oluştur", "adv.writeTitle": "USB'ye imaj yaz", "adv.imageFile": "İmaj dosyası",
+          "adv.writeBtn": "Seçili USB'ye yaz",
+          "adv.writeWarn": "Üst çubukta seçili cihaza yazar ve siler. Yönetici gerekir.",
+          "adv.oneTitle": "Tek disket imajı formatla", "adv.outImg": "Çıktı .img", "adv.createImage": "İmaj oluştur",
+          "ctx.open": "Aç", "ctx.cut": "Kes", "ctx.copy": "Kopyala", "ctx.paste": "Yapıştır", "ctx.rename": "Yeniden adlandır",
+          "ctx.export": "Dışa aktar", "ctx.delete": "Sil", "bctx.rename": "Bloğu yeniden adlandır…", "bctx.format": "Bloğu formatla…",
+          "pv.saveAs": "Farklı kaydet…", "pv.close": "Kapat", "col.name": "Ad", "col.bytes": "Bayt",
+          "dyn.noRemovable": "Çıkarılabilir sürücü yok", "dyn.error": "hata",
+          "dyn.summary": "{n} × {size}M disket", "dyn.chooseTop": "Üst çubuktan bir USB seçin.",
+          "dyn.pressScan": "Blokları listelemek için Tara'ya basın.",
+          "dyn.formatConfirm": "{model} silinip {banks} adet boş {size}M disket yazılsın mı?\n\nBu geri alınamaz.",
+          "dyn.formatting": "{banks} disket formatlanıyor — sürücüyü çıkarmayın…",
+          "dyn.wroteSafe": "{msg} — çıkarmak güvenli.",
+          "dyn.loading": "Yükleniyor…", "dyn.working": "İşleniyor…", "dyn.unlabeled": "etiketsiz",
+          "dyn.notFormatted": "Bu blok formatlı değil.",
+          "dyn.emptyFolder": "Boş klasör. Aşağıya dosya bırakın veya klasör oluşturun.",
+          "dyn.chooseFirst": "Önce bir USB seçin.", "dyn.scanning": "Taranıyor…",
+          "dyn.noBlocks": "Blok bulunamadı (önce formatlayın).", "dyn.noLabel": "(etiket yok)", "dyn.blank": "boş",
+          "dyn.folder": "Klasör", "dyn.file": "Dosya", "dyn.block": "Blok", "dyn.thisFloppy": "bu disket",
+          "dyn.newFolderPrompt": "Yeni klasör adı:", "dyn.created": "“{name}” oluşturuldu.",
+          "dyn.renamePrompt": "Yeni ad:", "dyn.renamed": "“{name}” olarak yeniden adlandırıldı.",
+          "dyn.deleteConfirm": "{n} öğe silinsin mi? Klasörler içindeki her şeyle birlikte silinir.\n\n{list}",
+          "dyn.deleted": "{n} öğe silindi.", "dyn.folderNoExport": "Klasörler dışa aktarılamaz.",
+          "dyn.saved1": "Kaydedildi → {dest}", "dyn.chooseDestFolder": "Hedef klasör seçin",
+          "dyn.savedN": "{n} dosya kaydedildi → {dest}", "dyn.truncated": "\n\n… (kırpıldı — tamamı için dışa aktarılan dosyayı açın)",
+          "dyn.binary": "İkili dosya · {size} bayt. Dışa aktarmak için “Farklı kaydet…” kullanın.",
+          "dyn.addFilesTitle": "Bu klasöre dosya ekle",
+          "dyn.useDragDrop": "Dosya eklemek için bırakma alanına sürükleyip bırakın.", "dyn.added": "{n} dosya eklendi.",
+          "dyn.copied": "{n} öğe kopyalandı. Bir klasöre gidip Yapıştır'a basın.", "dyn.cutMsg": "{n} öğe kesildi. Bir klasöre gidip Yapıştır'a basın.",
+          "dyn.pasting": "Yapıştırılıyor…", "dyn.pasted": "{n} öğe yapıştırıldı.",
+          "dyn.selectBlockFirst": "Önce soldan bir blok seçin.", "dyn.adding": "{n} dosya ekleniyor…",
+          "dyn.blockLabelPrompt": "Blok etiketi (en fazla 11 karakter):", "dyn.blockLabeled": "Blok {i} “{nl}” olarak etiketlendi.",
+          "dyn.formatBlockConfirm": "Blok {i} boş 1.44M disket olarak formatlansın mı? Üzerindeki her şey silinir.",
+          "dyn.newLabelPrompt": "Yeni etiket (isteğe bağlı):", "dyn.blockFormatted": "Blok {i} formatlandı.",
+          "dyn.setOutPath": "Bir çıktı yolu belirtin.", "dyn.wrote": "Yazıldı: {msg}",
+          "dyn.setImagePath": "İmaj dosyası yolunu belirtin.", "dyn.writeConfirm": "{model} silinip {path} yazılsın mı?",
+          "dyn.writingDrive": "Yazılıyor — sürücüyü çıkarmayın…", "dyn.createdFile": "{path} oluşturuldu ({size})."
+        }
+      };
+      let LANG = "en";
+      function t(key, p) {
+        const d = I18N[LANG] || I18N.en;
+        let s = d[key] != null ? d[key] : (I18N.en[key] != null ? I18N.en[key] : key);
+        if (p) for (const k in p) s = s.split("{" + k + "}").join(p[k]);
+        return s;
+      }
+      function applyI18n() {
+        document.querySelectorAll("[data-i18n]").forEach((el) => { el.textContent = t(el.getAttribute("data-i18n")); });
+        document.querySelectorAll("[data-i18n-title]").forEach((el) => { el.title = t(el.getAttribute("data-i18n-title")); });
+        document.documentElement.lang = LANG;
+      }
+      function setLang(lang) {
+        LANG = lang === "tr" ? "tr" : "en";
+        try { localStorage.setItem("fw_lang", LANG); } catch (e) {}
+        const sel = $("langSel"); if (sel) sel.value = LANG;
+        applyI18n();
+        if (typeof refreshSummary === "function") refreshSummary();
+      }
+      $("settingsBtn").addEventListener("click", (e) => { e.stopPropagation(); $("settingsPanel").hidden = !$("settingsPanel").hidden; });
+      $("langSel").addEventListener("change", (e) => setLang(e.target.value));
+      document.addEventListener("click", (e) => {
+        if (!$("settingsPanel").hidden && !$("settingsPanel").contains(e.target) && e.target !== $("settingsBtn")) $("settingsPanel").hidden = true;
+      });
 
       // ---- Custom window controls (frameless) ----
       const appWindow =
@@ -667,7 +837,7 @@
         try {
           drives = await invoke("list_drives");
           if (!drives.length) {
-            sel.innerHTML = '<option value="">No removable drive</option>';
+            sel.innerHTML = `<option value="">${t("dyn.noRemovable")}</option>`;
             $("devDot").className = "dot";
             return;
           }
@@ -676,7 +846,7 @@
             .join("");
           $("devDot").className = "dot on";
         } catch (e) {
-          sel.innerHTML = `<option value="">error</option>`;
+          sel.innerHTML = `<option value="">${t("dyn.error")}</option>`;
           $("devDot").className = "dot";
         }
       }
@@ -685,10 +855,10 @@
         selectedBlock = null;
         currentPath = "";
         selectedNames.clear();
-        $("blocksList").innerHTML = '<li class="mini-empty">Press Scan to list blocks.</li>';
-        $("crumbs").innerHTML = '<span style="color:var(--muted)">No block selected</span>';
+        $("blocksList").innerHTML = `<li class="mini-empty">${t("dyn.pressScan")}</li>`;
+        $("crumbs").innerHTML = `<span style="color:var(--muted)">${t("browse.noBlock")}</span>`;
         $("paneMeta").textContent = "";
-        $("readResult").innerHTML = '<div class="empty">Select a block on the left.</div>';
+        $("readResult").innerHTML = `<div class="empty">${t("browse.selectLeft")}</div>`;
         $("dropzone").dataset.active = "false";
         updateToolbar();
         if ($("tab-browse").classList.contains("active")) maybeAutoScan();
@@ -697,22 +867,22 @@
       // ---- Format ----
       function fmtSel() { return document.querySelector('input[name="fmtSize"]:checked').value; }
       function refreshSummary() {
-        $("fmtSummary").textContent = `${$("fmtBanks").value} × ${fmtSel()}M floppies`;
+        $("fmtSummary").textContent = t("dyn.summary", { n: $("fmtBanks").value, size: fmtSel() });
       }
       $("fmtBanks").addEventListener("change", refreshSummary);
       $("fmtDisks").addEventListener("change", refreshSummary);
 
       async function beginFormat() {
         const index = selectedDrive();
-        if (isNaN(index)) { setStatus($("fmtStatus"), "Choose a USB in the top bar.", "err"); return; }
+        if (isNaN(index)) { setStatus($("fmtStatus"), t("dyn.chooseTop"), "err"); return; }
         const size = fmtSel();
         const banks = parseInt($("fmtBanks").value, 10);
         const d = drives.find((x) => x.index === index);
-        if (!confirm(`Erase ${d ? d.model : "the drive"} and write ${banks} blank ${size}M floppies?\n\nThis cannot be undone.`)) return;
-        setStatus($("fmtStatus"), `Formatting ${banks} floppies — do not remove the drive…`);
+        if (!confirm(t("dyn.formatConfirm", { model: d ? d.model : "the drive", banks, size }))) return;
+        setStatus($("fmtStatus"), t("dyn.formatting", { banks }));
         try {
           const msg = await invoke("format_usb_device", { index, size, banks });
-          setStatus($("fmtStatus"), msg + " — safe to eject.", "ok");
+          setStatus($("fmtStatus"), t("dyn.wroteSafe", { msg }), "ok");
         } catch (e) { setStatus($("fmtStatus"), "" + e, "err"); }
       }
       $("fmtBegin").addEventListener("click", beginFormat);
@@ -752,20 +922,20 @@
         const e = entryByName(names[0]);
         if (!e) { d.hidden = true; return; }
         const loc = currentPath ? "/" + currentPath : "/";
-        const sz = e.is_dir ? "Folder" : `${e.size.toLocaleString()} bytes · ${kb(e.size)}`;
+        const sz = e.is_dir ? t("dyn.folder") : `${e.size.toLocaleString()} bytes · ${kb(e.size)}`;
         d.hidden = false;
         d.innerHTML = `<span class="big">${e.is_dir ? "📁" : "📄"}</span>` +
           `<div class="meta"><span class="nm">${e.name}</span>` +
-          `<span class="sub">${e.is_dir ? "Folder" : "File"} · ${sz}</span>` +
-          `<span class="sub">In <span class="mono">Block ${selectedBlock} ${loc}</span></span></div>`;
+          `<span class="sub">${e.is_dir ? t("dyn.folder") : t("dyn.file")} · ${sz}</span>` +
+          `<span class="sub"><span class="mono">${t("dyn.block")} ${selectedBlock} ${loc}</span></span></div>`;
       }
 
       function renderCrumbs(v) {
         const crumbs = $("crumbs");
-        if (!v.formatted) { crumbs.innerHTML = `<span class="cur">Block ${v.index} — blank</span>`; $("paneMeta").textContent = ""; return; }
+        if (!v.formatted) { crumbs.innerHTML = `<span class="cur">${t("dyn.block")} ${v.index} — ${t("dyn.blank")}</span>`; $("paneMeta").textContent = ""; return; }
         const parts = v.path ? v.path.split("/") : [];
         let acc = "";
-        const segs = [`<a data-path="">Block ${v.index}</a>`];
+        const segs = [`<a data-path="">${t("dyn.block")} ${v.index}</a>`];
         parts.forEach((p, i) => {
           acc = acc ? acc + "/" + p : p;
           segs.push('<span class="sly">›</span>');
@@ -774,24 +944,24 @@
         crumbs.innerHTML = segs.join("");
         crumbs.querySelectorAll("a[data-path]").forEach((a) => a.addEventListener("click", () => browse(a.dataset.path)));
         const pct = v.total_bytes ? Math.round((v.used_bytes / v.total_bytes) * 100) : 0;
-        $("paneMeta").textContent = `“${v.label || "unlabeled"}” · ${kb(v.used_bytes)} · ${pct}%`;
+        $("paneMeta").textContent = `“${v.label || t("dyn.unlabeled")}” · ${kb(v.used_bytes)} · ${pct}%`;
       }
 
       function renderDir(v) {
         currentPath = v.path;
         currentEntries = v.entries || [];
         selectedNames.clear();
-        $("dropBlock").textContent = v.formatted ? (v.path ? "/" + v.path : "this floppy") : "—";
+        $("dropBlock").textContent = v.formatted ? (v.path ? "/" + v.path : t("dyn.thisFloppy")) : "—";
         $("dropzone").dataset.active = v.formatted ? "true" : "false";
         renderCrumbs(v);
         const res = $("readResult");
-        if (!v.formatted) { res.innerHTML = '<div class="empty">This block isn’t formatted.</div>'; updateToolbar(); return; }
-        if (!currentEntries.length) { res.innerHTML = '<div class="empty">Empty folder. Drop files below, or make a folder.</div>'; updateToolbar(); return; }
+        if (!v.formatted) { res.innerHTML = `<div class="empty">${t("dyn.notFormatted")}</div>`; updateToolbar(); return; }
+        if (!currentEntries.length) { res.innerHTML = `<div class="empty">${t("dyn.emptyFolder")}</div>`; updateToolbar(); return; }
         const items = [...currentEntries].sort((a, b) => (b.is_dir - a.is_dir) || a.name.localeCompare(b.name));
         const rows = items.map((f) =>
           `<tr data-name="${f.name}" data-dir="${f.is_dir}"><td>${f.is_dir ? "📁" : "📄"}&nbsp; ${f.name}</td><td class="num">${f.is_dir ? "" : f.size.toLocaleString()}</td></tr>`
         ).join("");
-        res.innerHTML = `<table><thead><tr><th>Name</th><th class="num">Bytes</th></tr></thead><tbody>${rows}</tbody></table>`;
+        res.innerHTML = `<table><thead><tr><th>${t("col.name")}</th><th class="num">${t("col.bytes")}</th></tr></thead><tbody>${rows}</tbody></table>`;
         res.querySelectorAll("tr[data-name]").forEach((tr) => {
           tr.addEventListener("click", (e) => {
             if (!e.ctrlKey && !e.metaKey) selectedNames.clear();
@@ -821,7 +991,7 @@
       async function browse(path) {
         const driveIndex = selectedDrive();
         if (isNaN(driveIndex) || selectedBlock === null) return;
-        setStatus($("readStatus"), "Loading…");
+        setStatus($("readStatus"), t("dyn.loading"));
         try {
           const v = await invoke("browse_bank", { driveIndex, index: selectedBlock, path });
           renderDir(v);
@@ -830,44 +1000,44 @@
       }
 
       async function runOp(fn, okMsg) {
-        setStatus($("readStatus"), "Working…");
+        setStatus($("readStatus"), t("dyn.working"));
         try { const v = await fn(); renderDir(v); setStatus($("readStatus"), okMsg, "ok"); }
         catch (e) { setStatus($("readStatus"), "" + e, "err"); }
       }
 
       async function newFolder() {
         if (selectedBlock === null) return;
-        const name = prompt("New folder name:");
+        const name = prompt(t("dyn.newFolderPrompt"));
         if (!name) return;
-        runOp(() => invoke("mkdir_in_bank", { driveIndex: selectedDrive(), index: selectedBlock, path: currentPath, name: name.toUpperCase() }), `Created “${name}”.`);
+        runOp(() => invoke("mkdir_in_bank", { driveIndex: selectedDrive(), index: selectedBlock, path: currentPath, name: name.toUpperCase() }), t("dyn.created", { name }));
       }
       async function renameSel() {
         if (selectedNames.size !== 1) return;
         const from = [...selectedNames][0];
-        const to = prompt("Rename to:", from);
+        const to = prompt(t("dyn.renamePrompt"), from);
         if (!to || to === from) return;
-        runOp(() => invoke("rename_in_dir", { driveIndex: selectedDrive(), index: selectedBlock, path: currentPath, from, to: to.toUpperCase() }), `Renamed to “${to}”.`);
+        runOp(() => invoke("rename_in_dir", { driveIndex: selectedDrive(), index: selectedBlock, path: currentPath, from, to: to.toUpperCase() }), t("dyn.renamed", { name: to }));
       }
       async function deleteSel() {
         if (!selectedNames.size) return;
         const names = [...selectedNames];
-        if (!confirm(`Delete ${names.length} item(s)? Folders are removed with everything inside.\n\n${names.join("\n")}`)) return;
-        runOp(() => invoke("delete_in_dir", { driveIndex: selectedDrive(), index: selectedBlock, path: currentPath, names }), `Deleted ${names.length} item(s).`);
+        if (!confirm(t("dyn.deleteConfirm", { n: names.length, list: names.join("\n") }))) return;
+        runOp(() => invoke("delete_in_dir", { driveIndex: selectedDrive(), index: selectedBlock, path: currentPath, names }), t("dyn.deleted", { n: names.length }));
       }
       async function exportNames(names) {
         const files = names.filter((n) => !(entryByName(n) || {}).is_dir);
-        if (!files.length) { setStatus($("readStatus"), "Folders can’t be exported.", "err"); return; }
+        if (!files.length) { setStatus($("readStatus"), t("dyn.folderNoExport"), "err"); return; }
         try {
           if (dialog && dialog.save && files.length === 1) {
             const dest = await dialog.save({ defaultPath: files[0] });
             if (!dest) return;
             await invoke("export_file", { driveIndex: selectedDrive(), index: selectedBlock, path: currentPath, name: files[0], dest });
-            setStatus($("readStatus"), `Saved → ${dest}`, "ok");
+            setStatus($("readStatus"), t("dyn.saved1", { dest }), "ok");
             return;
           }
           let destDir = "";
           if (dialog && dialog.open && files.length > 1) {
-            destDir = await dialog.open({ directory: true, title: "Choose a destination folder" });
+            destDir = await dialog.open({ directory: true, title: t("dyn.chooseDestFolder") });
             if (!destDir) return;
           }
           let last = "";
@@ -875,7 +1045,7 @@
             const dest = destDir ? destDir + "\\" + name : "";
             last = await invoke("export_file", { driveIndex: selectedDrive(), index: selectedBlock, path: currentPath, name, dest });
           }
-          setStatus($("readStatus"), `Saved ${files.length} file(s) → ${last}`, "ok");
+          setStatus($("readStatus"), t("dyn.savedN", { n: files.length, dest: last }), "ok");
         } catch (e) { setStatus($("readStatus"), "" + e, "err"); }
       }
 
@@ -885,18 +1055,18 @@
         if (isNaN(driveIndex) || selectedBlock === null) return;
         pvTarget = name;
         $("pvTitle").textContent = name;
-        $("pvBody").innerHTML = '<div class="binfo">Loading…</div>';
+        $("pvBody").innerHTML = `<div class="binfo">${t("dyn.loading")}</div>`;
         $("previewModal").hidden = false;
         try {
           const p = await invoke("preview_file", { driveIndex, index: selectedBlock, path: currentPath, name });
           if (p.kind === "text") {
             const pre = document.createElement("pre");
-            pre.textContent = p.text + (p.size > 262144 ? "\n\n… (truncated — open the exported file for the rest)" : "");
+            pre.textContent = p.text + (p.size > 262144 ? t("dyn.truncated") : "");
             $("pvBody").innerHTML = ""; $("pvBody").appendChild(pre);
           } else if (p.kind === "image") {
             $("pvBody").innerHTML = `<img src="${p.data_url}" alt="${name}" />`;
           } else {
-            $("pvBody").innerHTML = `<div class="binfo">Binary file · ${p.size.toLocaleString()} bytes.<br>Use “Save as…” to export it.</div>`;
+            $("pvBody").innerHTML = `<div class="binfo">${t("dyn.binary", { size: p.size.toLocaleString() })}</div>`;
           }
         } catch (e) { $("pvBody").innerHTML = `<div class="binfo">${e}</div>`; }
       }
@@ -908,24 +1078,24 @@
 
       async function addFiles() {
         if (selectedBlock === null) return;
-        if (!dialog || !dialog.open) { setStatus($("readStatus"), "Drag & drop files onto the drop zone to add them.", "err"); return; }
-        const picked = await dialog.open({ multiple: true, title: "Add files to this folder" });
+        if (!dialog || !dialog.open) { setStatus($("readStatus"), t("dyn.useDragDrop"), "err"); return; }
+        const picked = await dialog.open({ multiple: true, title: t("dyn.addFilesTitle") });
         if (!picked) return;
         const files = Array.isArray(picked) ? picked : [picked];
-        runOp(() => invoke("add_files_in_dir", { driveIndex: selectedDrive(), index: selectedBlock, path: currentPath, files }), `Added ${files.length} file(s).`);
+        runOp(() => invoke("add_files_in_dir", { driveIndex: selectedDrive(), index: selectedBlock, path: currentPath, files }), t("dyn.added", { n: files.length }));
       }
 
       function copySel(cut) {
         if (!selectedNames.size) return;
         clip = { srcIndex: selectedBlock, srcPath: currentPath, names: [...selectedNames], cut };
-        setStatus($("readStatus"), `${cut ? "Cut" : "Copied"} ${clip.names.length} item(s). Go to a folder and Paste.`, "");
+        setStatus($("readStatus"), t(cut ? "dyn.cutMsg" : "dyn.copied", { n: clip.names.length }), "");
         updateToolbar();
       }
 
       async function paste() {
         if (!clip || selectedBlock === null) return;
         const c = clip;
-        setStatus($("readStatus"), "Pasting…");
+        setStatus($("readStatus"), t("dyn.pasting"));
         try {
           const v = await invoke("transfer_entries", {
             driveIndex: selectedDrive(),
@@ -934,7 +1104,7 @@
           });
           renderDir(v);
           if (c.cut) clip = null;
-          setStatus($("readStatus"), `Pasted ${c.names.length} item(s).`, "ok");
+          setStatus($("readStatus"), t("dyn.pasted", { n: c.names.length }), "ok");
           updateToolbar();
         } catch (e) { setStatus($("readStatus"), "" + e, "err"); }
       }
@@ -984,7 +1154,7 @@
       function blockLiLabel(idx, label, formatted) {
         const li = document.querySelector(`#blocksList li[data-index="${idx}"]`);
         if (!li) return;
-        li.querySelector(".nm").textContent = formatted ? (label || "(no label)") : "blank";
+        li.querySelector(".nm").textContent = formatted ? (label || t("dyn.noLabel")) : t("dyn.blank");
         li.classList.toggle("blank", !formatted);
         li.classList.toggle("has-label", formatted && !!label);
       }
@@ -997,22 +1167,22 @@
         if (isNaN(driveIndex)) return;
         if (act === "open") { selectBlock(idx); return; }
         if (act === "rename") {
-          const label = prompt("Block label (max 11 chars):", "");
+          const label = prompt(t("dyn.blockLabelPrompt"), "");
           if (label === null) return;
           try {
             const nl = await invoke("set_block_label", { driveIndex, index: idx, label: label.toUpperCase() });
             blockLiLabel(idx, nl, true);
             if (idx === selectedBlock) browse(currentPath);
-            setStatus($("readStatus"), `Block ${idx} labeled “${nl}”.`, "ok");
+            setStatus($("readStatus"), t("dyn.blockLabeled", { i: idx, nl }), "ok");
           } catch (err) { setStatus($("readStatus"), "" + err, "err"); }
         } else if (act === "format") {
-          if (!confirm(`Format block ${idx} as a blank 1.44M floppy? Everything on it is erased.`)) return;
-          const label = prompt("New label (optional):", "NO NAME") || "NO NAME";
+          if (!confirm(t("dyn.formatBlockConfirm", { i: idx }))) return;
+          const label = prompt(t("dyn.newLabelPrompt"), "NO NAME") || "NO NAME";
           try {
             await invoke("format_one_block", { driveIndex, index: idx, label: label.toUpperCase() });
             blockLiLabel(idx, label.toUpperCase(), true);
             if (idx === selectedBlock) { currentPath = ""; browse(""); }
-            setStatus($("readStatus"), `Block ${idx} formatted.`, "ok");
+            setStatus($("readStatus"), t("dyn.blockFormatted", { i: idx }), "ok");
           } catch (err) { setStatus($("readStatus"), "" + err, "err"); }
         }
       });
@@ -1037,7 +1207,7 @@
 
       async function selectBlock(index) {
         const driveIndex = selectedDrive();
-        if (isNaN(driveIndex)) { setStatus($("readStatus"), "Choose a USB in the top bar.", "err"); return; }
+        if (isNaN(driveIndex)) { setStatus($("readStatus"), t("dyn.chooseTop"), "err"); return; }
         selectedBlock = index;
         currentPath = "";
         markSelected(index);
@@ -1047,15 +1217,15 @@
       async function scanBlocks() {
         const driveIndex = selectedDrive();
         const list = $("blocksList");
-        if (isNaN(driveIndex)) { list.innerHTML = '<li class="mini-empty">Choose a USB first.</li>'; return; }
+        if (isNaN(driveIndex)) { list.innerHTML = `<li class="mini-empty">${t("dyn.chooseFirst")}</li>`; return; }
         const count = parseInt($("blockCount").value, 10) || 100;
-        list.innerHTML = '<li class="mini-empty">Scanning…</li>';
+        list.innerHTML = `<li class="mini-empty">${t("dyn.scanning")}</li>`;
         try {
           const blocks = await invoke("scan_blocks", { driveIndex, count });
-          if (!blocks.length) { list.innerHTML = '<li class="mini-empty">No blocks found (format first).</li>'; return; }
+          if (!blocks.length) { list.innerHTML = `<li class="mini-empty">${t("dyn.noBlocks")}</li>`; return; }
           list.innerHTML = blocks.map((b) => {
             const n = String(b.index).padStart(3, "0");
-            const label = b.formatted ? (b.label || "(no label)") : "blank";
+            const label = b.formatted ? (b.label || t("dyn.noLabel")) : t("dyn.blank");
             const cls = b.formatted ? (b.label ? "has-label" : "") : "blank";
             return `<li data-index="${b.index}" class="${cls}" aria-selected="false">${FLOPPY_ICO}<span class="idx">${n}</span><span class="nm">${label}</span></li>`;
           }).join("");
@@ -1075,15 +1245,15 @@
       // ---- Drag & drop into the current folder ----
       async function handleDrop(paths) {
         if (!$("tab-browse").classList.contains("active")) return;
-        if (selectedBlock === null) { setStatus($("readStatus"), "Select a block on the left first.", "err"); return; }
+        if (selectedBlock === null) { setStatus($("readStatus"), t("dyn.selectBlockFirst"), "err"); return; }
         if (!paths || !paths.length) return;
         const dz = $("dropzone");
         dz.classList.add("busy");
-        setStatus($("readStatus"), `Adding ${paths.length} file(s)…`);
+        setStatus($("readStatus"), t("dyn.adding", { n: paths.length }));
         try {
           const v = await invoke("add_files_in_dir", { driveIndex: selectedDrive(), index: selectedBlock, path: currentPath, files: paths });
           renderDir(v);
-          setStatus($("readStatus"), `Added ${paths.length} file(s).`, "ok");
+          setStatus($("readStatus"), t("dyn.added", { n: paths.length }), "ok");
         } catch (e) {
           setStatus($("readStatus"), "" + e, "err");
         } finally {
@@ -1124,7 +1294,7 @@
 
       async function buildSfr() {
         const out = $("sfrOut").value.trim();
-        if (!out) { setStatus($("sfrStatus"), "Set an output path.", "err"); return; }
+        if (!out) { setStatus($("sfrStatus"), t("dyn.setOutPath"), "err"); return; }
         const banks = parseInt($("sfrBanks").value, 10);
         const bank_specs = [...document.querySelectorAll("#sfrRows tr")].map((r) => ({
           index: parseInt(r.querySelector(".sfr-idx").value, 10),
@@ -1133,7 +1303,7 @@
         }));
         try {
           const msg = await invoke("build_sfr_image", { out, banks, bankSpecs: bank_specs });
-          setStatus($("sfrStatus"), "Wrote " + msg, "ok");
+          setStatus($("sfrStatus"), t("dyn.wrote", { msg }), "ok");
         } catch (e) { setStatus($("sfrStatus"), "" + e, "err"); }
       }
       $("sfrBuild").addEventListener("click", buildSfr);
@@ -1142,14 +1312,14 @@
       async function writeImage() {
         const imagePath = $("writeImg").value.trim();
         const index = selectedDrive();
-        if (!imagePath) { setStatus($("writeStatus"), "Set the image file path.", "err"); return; }
-        if (isNaN(index)) { setStatus($("writeStatus"), "Choose a USB in the top bar.", "err"); return; }
+        if (!imagePath) { setStatus($("writeStatus"), t("dyn.setImagePath"), "err"); return; }
+        if (isNaN(index)) { setStatus($("writeStatus"), t("dyn.chooseTop"), "err"); return; }
         const d = drives.find((x) => x.index === index);
-        if (!confirm(`Erase ${d ? d.model : "the drive"} and write ${imagePath}?`)) return;
-        setStatus($("writeStatus"), "Writing — do not remove the drive…");
+        if (!confirm(t("dyn.writeConfirm", { model: d ? d.model : "the drive", path: imagePath }))) return;
+        setStatus($("writeStatus"), t("dyn.writingDrive"));
         try {
           const msg = await invoke("write_usb", { imagePath, index });
-          setStatus($("writeStatus"), msg + " — safe to eject.", "ok");
+          setStatus($("writeStatus"), t("dyn.wroteSafe", { msg }), "ok");
         } catch (e) { setStatus($("writeStatus"), "" + e, "err"); }
       }
       $("writeBtn").addEventListener("click", writeImage);
@@ -1157,16 +1327,19 @@
       // ---- Advanced: single image ----
       async function buildOne() {
         const path = $("oneOut").value.trim();
-        if (!path) { setStatus($("oneStatus"), "Set an output path.", "err"); return; }
+        if (!path) { setStatus($("oneStatus"), t("dyn.setOutPath"), "err"); return; }
         const size = document.querySelector('input[name="oneSize"]:checked').value;
         try {
           const bytes = await invoke("format_image_file", { path, size, label: $("oneLabel").value });
-          setStatus($("oneStatus"), `Created ${path} (${kb(bytes)}).`, "ok");
+          setStatus($("oneStatus"), t("dyn.createdFile", { path, size: kb(bytes) }), "ok");
         } catch (e) { setStatus($("oneStatus"), "" + e, "err"); }
       }
       $("oneBuild").addEventListener("click", buildOne);
 
       // init
+      let savedLang = "en";
+      try { savedLang = localStorage.getItem("fw_lang") || "en"; } catch (e) {}
+      setLang(savedLang);
       refreshSummary();
       rescan();
     </script>
