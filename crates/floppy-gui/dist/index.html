@@ -389,6 +389,8 @@
       .dropzone b { color: var(--text); }
       .dropzone.over { border-color: var(--amber); background: var(--amber-soft); color: var(--text); }
       .dropzone.busy { border-style: solid; opacity: 0.7; }
+      .dropzone.admin { border-color: var(--danger); border-style: solid; color: var(--danger); }
+      .dropzone.admin svg { display: none; }
 
       @media (max-width: 560px) {
         header { flex-wrap: wrap; }
@@ -550,7 +552,7 @@
             <div id="details" class="details" hidden></div>
             <div class="dropzone" id="dropzone" data-active="false">
               <svg viewBox="0 0 24 24" fill="none" aria-hidden="true"><path d="M12 15V4m0 0 4 4m-4-4L8 8" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/><path d="M4 15v3a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-3" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"/></svg>
-              <span><span data-i18n="browse.dropHere">Drop files here to add them to</span> <b id="dropBlock">—</b></span>
+              <span><span id="dropHint" data-i18n="browse.dropHere">Drop files here to add them to</span> <b id="dropBlock">—</b></span>
             </div>
             <p class="status" id="readStatus"></p>
           </div>
@@ -727,6 +729,7 @@
           "dyn.binary": "Binary file · {size} bytes. Use “Save as…” to export it.",
           "dyn.addFilesTitle": "Add files to this folder", "dyn.addFolderTitle": "Choose folder(s) to add",
           "dyn.useDragDrop": "Drag & drop files onto the drop zone to add them.", "dyn.added": "Added {n} file(s).",
+          "dyn.dropAdmin": "Running as Administrator — Windows blocks drag-and-drop from Explorer. Use “Add ▾”, or copy in Explorer and paste (Ctrl+V), into",
           "dyn.copied": "Copied {n} item(s). Go to a folder and Paste.", "dyn.cutMsg": "Cut {n} item(s). Go to a folder and Paste.",
           "dyn.pasting": "Pasting…", "dyn.pasted": "Pasted {n} item(s).",
           "dyn.selectBlockFirst": "Select a block on the left first.", "dyn.adding": "Adding {n} file(s)…",
@@ -791,6 +794,7 @@
           "dyn.binary": "İkili dosya · {size} bayt. Dışa aktarmak için “Farklı kaydet…” kullanın.",
           "dyn.addFilesTitle": "Bu klasöre dosya ekle", "dyn.addFolderTitle": "Eklenecek klasör(ler)i seçin",
           "dyn.useDragDrop": "Dosya eklemek için bırakma alanına sürükleyip bırakın.", "dyn.added": "{n} dosya eklendi.",
+          "dyn.dropAdmin": "Yönetici olarak çalışıyor — Windows, Explorer'dan sürükle-bırağı engelliyor. “Add ▾” kullanın ya da Explorer'da kopyalayıp Ctrl+V ile şuraya ekleyin:",
           "dyn.copied": "{n} öğe kopyalandı. Bir klasöre gidip Yapıştır'a basın.", "dyn.cutMsg": "{n} öğe kesildi. Bir klasöre gidip Yapıştır'a basın.",
           "dyn.pasting": "Yapıştırılıyor…", "dyn.pasted": "{n} öğe yapıştırıldı.",
           "dyn.selectBlockFirst": "Önce soldan bir blok seçin.", "dyn.adding": "{n} dosya ekleniyor…",
@@ -812,6 +816,7 @@
       function applyI18n() {
         document.querySelectorAll("[data-i18n]").forEach((el) => { el.textContent = t(el.getAttribute("data-i18n")); });
         document.querySelectorAll("[data-i18n-title]").forEach((el) => { el.title = t(el.getAttribute("data-i18n-title")); });
+        if (window.IS_ELEVATED) { const dh = $("dropHint"); if (dh) dh.textContent = t("dyn.dropAdmin"); }
         document.documentElement.lang = LANG;
       }
       function setLang(lang) {
@@ -1425,6 +1430,11 @@
       refreshSummary();
       refreshLabelPreview();
       rescan();
+      // Elevated apps can't receive Explorer drag-drop (Windows UIPI) — tell the user.
+      invoke("is_elevated").then((adm) => {
+        window.IS_ELEVATED = adm;
+        if (adm) { $("dropzone").classList.add("admin"); applyI18n(); }
+      }).catch(() => {});
     </script>
   </body>
 </html>
