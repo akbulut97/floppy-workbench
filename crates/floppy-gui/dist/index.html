@@ -640,6 +640,7 @@
     <div id="blockCtx" class="ctx" hidden>
       <button data-bact="open" data-i18n="ctx.open">Open</button>
       <button data-bact="rename" data-i18n="bctx.rename">Rename block…</button>
+      <button data-bact="bootable" data-i18n="bctx.bootable">Make bootable (FreeDOS)…</button>
       <button data-bact="format" class="danger-item" data-i18n="bctx.format">Format block…</button>
     </div>
 
@@ -686,7 +687,7 @@
           "format.labelPrefix": "Block name", "format.labelStart": "Start number",
           "dyn.labelPreview": "Labels: {first}, {second} … {last}", "dyn.labelNone": "Blocks will be unnamed (NO NAME).",
           "format.warn": "Erases the entire USB. Only removable drives are listed. Needs Administrator.",
-          "format.bootNote": "Bootable DOS floppies need FreeDOS system files, which aren't bundled yet. Prefer not to write directly? Build an image file under Advanced and flash it with Rufus or dd.",
+          "format.bootNote": "To make a DOS-bootable floppy, go to Contents, right-click a block, and choose “Make bootable (FreeDOS)”. Prefer not to write directly? Build an image file under Advanced and flash it with Rufus or dd.",
           "browse.title": "Browse blocks",
           "browse.lead": "Each block is one floppy on the USB. Pick a block to see its files, then drag files in.",
           "browse.blocks": "Blocks", "browse.scan": "Scan", "browse.countTitle": "How many blocks to list",
@@ -707,6 +708,9 @@
           "adv.oneTitle": "Format a single floppy image", "adv.outImg": "Output .img", "adv.createImage": "Create image",
           "ctx.open": "Open", "ctx.cut": "Cut", "ctx.copy": "Copy", "ctx.paste": "Paste", "ctx.rename": "Rename",
           "ctx.export": "Export", "ctx.delete": "Delete", "bctx.rename": "Rename block…", "bctx.format": "Format block…",
+          "bctx.bootable": "Make bootable (FreeDOS)…",
+          "dyn.bootableConfirm": "Make block {i} a FreeDOS boot floppy? Everything on it is erased.",
+          "dyn.bootLabelPrompt": "Volume label:", "dyn.bootableDone": "Block {i} is now FreeDOS-bootable.",
           "pv.saveAs": "Save as…", "pv.close": "Close", "col.name": "Name", "col.bytes": "Bytes",
           "dyn.noRemovable": "No removable drive", "dyn.error": "error",
           "dyn.summary": "{n} × {size}M floppies", "dyn.chooseTop": "Choose a USB in the top bar.",
@@ -751,7 +755,7 @@
           "format.labelPrefix": "Blok adı", "format.labelStart": "Başlangıç numarası",
           "dyn.labelPreview": "Etiketler: {first}, {second} … {last}", "dyn.labelNone": "Bloklar isimsiz olur (NO NAME).",
           "format.warn": "Tüm USB'yi siler. Yalnızca çıkarılabilir sürücüler listelenir. Yönetici gerekir.",
-          "format.bootNote": "Açılabilir DOS disketleri için FreeDOS sistem dosyaları gerekir (henüz pakete dahil değil). Doğrudan yazmak istemiyorsanız Gelişmiş sekmesinde bir imaj dosyası oluşturup Rufus veya dd ile yazın.",
+          "format.bootNote": "DOS ile açılabilir disket için İçerik sekmesinde bir bloğa sağ tıklayıp “Bootable yap (FreeDOS)” seçin. Doğrudan yazmak istemiyorsanız Gelişmiş sekmesinde bir imaj dosyası oluşturup Rufus veya dd ile yazın.",
           "browse.title": "Blokları gözat",
           "browse.lead": "Her blok, USB'deki bir diskettir. Dosyalarını görmek için bir blok seçin, sonra dosyaları sürükleyin.",
           "browse.blocks": "Bloklar", "browse.scan": "Tara", "browse.countTitle": "Kaç blok listelensin",
@@ -772,6 +776,9 @@
           "adv.oneTitle": "Tek disket imajı formatla", "adv.outImg": "Çıktı .img", "adv.createImage": "İmaj oluştur",
           "ctx.open": "Aç", "ctx.cut": "Kes", "ctx.copy": "Kopyala", "ctx.paste": "Yapıştır", "ctx.rename": "Yeniden adlandır",
           "ctx.export": "Dışa aktar", "ctx.delete": "Sil", "bctx.rename": "Bloğu yeniden adlandır…", "bctx.format": "Bloğu formatla…",
+          "bctx.bootable": "Bootable yap (FreeDOS)…",
+          "dyn.bootableConfirm": "Blok {i} FreeDOS açılış disketi yapılsın mı? Üzerindeki her şey silinir.",
+          "dyn.bootLabelPrompt": "Birim etiketi:", "dyn.bootableDone": "Blok {i} artık FreeDOS ile açılabilir.",
           "pv.saveAs": "Farklı kaydet…", "pv.close": "Kapat", "col.name": "Ad", "col.bytes": "Bayt",
           "dyn.noRemovable": "Çıkarılabilir sürücü yok", "dyn.error": "hata",
           "dyn.summary": "{n} × {size}M disket", "dyn.chooseTop": "Üst çubuktan bir USB seçin.",
@@ -1261,6 +1268,16 @@
             blockLiLabel(idx, nl, true);
             if (idx === selectedBlock) browse(currentPath);
             setStatus($("readStatus"), t("dyn.blockLabeled", { i: idx, nl }), "ok");
+          } catch (err) { setStatus($("readStatus"), "" + err, "err"); }
+        } else if (act === "bootable") {
+          if (!confirm(t("dyn.bootableConfirm", { i: idx }))) return;
+          const label = prompt(t("dyn.bootLabelPrompt"), "FREEDOS") || "FREEDOS";
+          setStatus($("readStatus"), t("dyn.working"));
+          try {
+            await invoke("make_bank_bootable", { driveIndex, index: idx, label: label.toUpperCase() });
+            blockLiLabel(idx, label.toUpperCase(), true);
+            if (idx === selectedBlock) { currentPath = ""; browse(""); }
+            setStatus($("readStatus"), t("dyn.bootableDone", { i: idx }), "ok");
           } catch (err) { setStatus($("readStatus"), "" + err, "err"); }
         } else if (act === "format") {
           if (!confirm(t("dyn.formatBlockConfirm", { i: idx }))) return;

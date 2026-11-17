@@ -521,6 +521,14 @@ fn format_one_block(drive_index: u32, index: u32, label: String) -> Result<(), S
     device::write_bank(&drive, index, &img).map_err(|e| e.to_string())
 }
 
+/// Make a single block a FreeDOS-bootable 1.44M floppy (boots to A:\>). DESTRUCTIVE.
+#[tauri::command]
+fn make_bank_bootable(drive_index: u32, index: u32, label: String) -> Result<(), String> {
+    let drive = find_drive(drive_index)?;
+    let img = floppyctl::freedos::make_bootable_image(&label, 0).map_err(|e| e.to_string())?;
+    device::write_bank(&drive, index, &img).map_err(|e| e.to_string())
+}
+
 /// True when the app is running elevated (as Administrator). Used to warn that
 /// Explorer→app drag-and-drop is blocked by Windows while elevated.
 #[tauri::command]
@@ -551,7 +559,8 @@ fn main() {
             set_block_label,
             format_one_block,
             preview_file,
-            is_elevated
+            is_elevated,
+            make_bank_bootable
         ])
         .run(tauri::generate_context!())
         .expect("error while running tauri application");

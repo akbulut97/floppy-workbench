@@ -4,6 +4,7 @@
 pub mod blockset;
 pub mod clipboard;
 pub mod device;
+pub mod freedos;
 pub mod fsops;
 pub mod sfr;
 
