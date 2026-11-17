@@ -521,6 +521,23 @@ fn format_one_block(drive_index: u32, index: u32, label: String) -> Result<(), S
     device::write_bank(&drive, index, &img).map_err(|e| e.to_string())
 }
 
+/// Back up the first `banks` banks of the USB to a raw image file.
+#[tauri::command]
+fn backup_usb(drive_index: u32, banks: u32, out_path: String) -> Result<String, String> {
+    let drive = find_drive(drive_index)?;
+    let len = banks as usize * BANK_STRIDE;
+    if len as u64 > drive.size_bytes {
+        return Err("requested size is larger than the drive".into());
+    }
+    let data = device::read_range(&drive, len).map_err(|e| e.to_string())?;
+    std::fs::write(&out_path, &data).map_err(|e| format!("{out_path}: {e}"))?;
+    Ok(format!(
+        "{} ({:.0} MiB)",
+        out_path,
+        data.len() as f64 / (1024.0 * 1024.0)
+    ))
+}
+
 /// Make a single block a FreeDOS-bootable 1.44M floppy (boots to A:\>). DESTRUCTIVE.
 #[tauri::command]
 fn make_bank_bootable(drive_index: u32, index: u32, label: String) -> Result<(), String> {
@@ -560,7 +577,8 @@ fn main() {
             format_one_block,
             preview_file,
             is_elevated,
-            make_bank_bootable
+            make_bank_bootable,
+            backup_usb
         ])
         .run(tauri::generate_context!())
         .expect("error while running tauri application");

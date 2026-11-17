@@ -211,6 +211,37 @@ pub fn read_bank(_drive: &UsbDrive, _index: u32) -> Result<Vec<u8>> {
     bail!("raw device reading is currently only implemented on Windows")
 }
 
+/// Read `len` bytes from the start of the drive (for backing up the USB).
+#[cfg(windows)]
+pub fn read_range(drive: &UsbDrive, len: usize) -> Result<Vec<u8>> {
+    use windows::Win32::Foundation::{CloseHandle, GENERIC_READ};
+    use windows::Win32::Storage::FileSystem::ReadFile;
+
+    unsafe {
+        let handle = win::open_physical(&drive.path, GENERIC_READ.0)?;
+        let mut buf = vec![0u8; len];
+        let mut pos = 0usize;
+        while pos < len {
+            let want = (len - pos).min(1024 * 1024);
+            let mut read = 0u32;
+            if ReadFile(handle, Some(&mut buf[pos..pos + want]), Some(&mut read), None).is_err()
+                || read == 0
+            {
+                let _ = CloseHandle(handle);
+                bail!("read failed at offset {pos}");
+            }
+            pos += read as usize;
+        }
+        let _ = CloseHandle(handle);
+        Ok(buf)
+    }
+}
+
+#[cfg(not(windows))]
+pub fn read_range(_drive: &UsbDrive, _len: usize) -> Result<Vec<u8>> {
+    bail!("raw device reading is currently only implemented on Windows")
+}
+
 /// Read the first 512 bytes (boot sector) of each of the first `count` banks,
 /// opening the drive once. Used to label the block list cheaply. Scanning stops
 /// early at the end of the device.

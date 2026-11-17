@@ -597,6 +597,19 @@
         </div>
 
         <div class="card">
+          <h3 data-i18n="adv.backupTitle">Back up the USB to a file</h3>
+          <div class="inline">
+            <label class="field" style="margin: 0">
+              <span class="lbl" data-i18n="adv.backupBanks">Banks to back up</span>
+              <input id="bkBanks" type="number" value="100" min="1" max="1000" style="width: 100px" />
+            </label>
+            <button id="bkBtn" style="align-self: flex-end" data-i18n="adv.backupBtn">Back up…</button>
+          </div>
+          <p class="note" data-i18n="adv.backupNote">Saves the chosen number of 1.5 MiB banks from the top-bar device into a raw .img you can restore above.</p>
+          <p class="status" id="bkStatus"></p>
+        </div>
+
+        <div class="card">
           <h3 data-i18n="adv.oneTitle">Format a single floppy image</h3>
           <div class="inline">
             <label class="field" style="margin: 0; flex: 1">
@@ -706,6 +719,9 @@
           "adv.writeBtn": "Write to selected USB",
           "adv.writeWarn": "Writes to the device chosen in the top bar and erases it. Needs Administrator.",
           "adv.oneTitle": "Format a single floppy image", "adv.outImg": "Output .img", "adv.createImage": "Create image",
+          "adv.backupTitle": "Back up the USB to a file", "adv.backupBanks": "Banks to back up", "adv.backupBtn": "Back up…",
+          "adv.backupNote": "Saves the chosen number of 1.5 MiB banks from the top-bar device into a raw .img you can restore above.",
+          "dyn.backingUp": "Backing up {n} banks…", "dyn.backedUp": "Saved {msg}",
           "ctx.open": "Open", "ctx.cut": "Cut", "ctx.copy": "Copy", "ctx.paste": "Paste", "ctx.rename": "Rename",
           "ctx.export": "Export", "ctx.delete": "Delete", "bctx.rename": "Rename block…", "bctx.format": "Format block…",
           "bctx.bootable": "Make bootable (FreeDOS)…",
@@ -774,6 +790,9 @@
           "adv.writeBtn": "Seçili USB'ye yaz",
           "adv.writeWarn": "Üst çubukta seçili cihaza yazar ve siler. Yönetici gerekir.",
           "adv.oneTitle": "Tek disket imajı formatla", "adv.outImg": "Çıktı .img", "adv.createImage": "İmaj oluştur",
+          "adv.backupTitle": "USB'yi dosyaya yedekle", "adv.backupBanks": "Yedeklenecek banka", "adv.backupBtn": "Yedekle…",
+          "adv.backupNote": "Üst çubuktaki cihazdan seçtiğiniz sayıda 1.5 MiB bankayı, yukarıdan geri yükleyebileceğiniz ham bir .img dosyasına kaydeder.",
+          "dyn.backingUp": "{n} banka yedekleniyor…", "dyn.backedUp": "Kaydedildi: {msg}",
           "ctx.open": "Aç", "ctx.cut": "Kes", "ctx.copy": "Kopyala", "ctx.paste": "Yapıştır", "ctx.rename": "Yeniden adlandır",
           "ctx.export": "Dışa aktar", "ctx.delete": "Sil", "bctx.rename": "Bloğu yeniden adlandır…", "bctx.format": "Bloğu formatla…",
           "bctx.bootable": "Bootable yap (FreeDOS)…",
@@ -1439,6 +1458,21 @@
         } catch (e) { setStatus($("oneStatus"), "" + e, "err"); }
       }
       $("oneBuild").addEventListener("click", buildOne);
+
+      // ---- Advanced: back up USB ----
+      async function backupUsb() {
+        const index = selectedDrive();
+        if (isNaN(index)) { setStatus($("bkStatus"), t("dyn.chooseTop"), "err"); return; }
+        const banks = parseInt($("bkBanks").value, 10) || 100;
+        let out = "backup.img";
+        if (dialog && dialog.save) { const d = await dialog.save({ defaultPath: "backup.img" }); if (!d) return; out = d; }
+        setStatus($("bkStatus"), t("dyn.backingUp", { n: banks }));
+        try {
+          const msg = await invoke("backup_usb", { driveIndex: index, banks, outPath: out });
+          setStatus($("bkStatus"), t("dyn.backedUp", { msg }), "ok");
+        } catch (e) { setStatus($("bkStatus"), "" + e, "err"); }
+      }
+      $("bkBtn").addEventListener("click", backupUsb);
 
       // init
       let savedLang = "en";
