@@ -87,6 +87,28 @@ pub fn inspect(img: &[u8]) -> Result<ImageInfo> {
 }
 
 /// Parse a human size string (`"720"`, `"1.2"`, `"1.44"`) into a [`FloppyFormat`].
+/// Build a numbered volume label: `prefix` + `number` (e.g. `FLOPPY0`, `FLOPPY1`, …).
+///
+/// The prefix is upper-cased, characters DOS forbids in labels become `_`, and it
+/// is shortened so the whole label fits the 11-character FAT limit with the
+/// number always kept intact. An empty prefix gives `NO NAME`.
+pub fn numbered_label(prefix: &str, number: u32) -> String {
+    const FORBIDDEN: &str = "\"*+,./:;<=>?[\\]|";
+    let clean: String = prefix
+        .trim()
+        .chars()
+        .map(|c| c.to_ascii_uppercase())
+        .map(|c| if !c.is_ascii() || c.is_ascii_control() || FORBIDDEN.contains(c) { '_' } else { c })
+        .collect();
+    if clean.is_empty() {
+        return "NO NAME".into();
+    }
+    let num = number.to_string();
+    let keep = 11usize.saturating_sub(num.len());
+    let head: String = clean.chars().take(keep).collect();
+    format!("{}{num}", head.trim_end())
+}
+
 pub fn parse_format(s: &str) -> Result<FloppyFormat> {
     Ok(match s.trim() {
         "720" | "720k" | "720K" => FloppyFormat::F720K,

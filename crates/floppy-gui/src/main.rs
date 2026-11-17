@@ -114,15 +114,25 @@ fn list_drives() -> Result<Vec<UsbDrive>, String> {
 
 /// "Begin to format": format the whole selected USB into `banks` identical
 /// blank FAT12 floppies of `size`, then write it to the device. DESTRUCTIVE.
+/// Each block is labelled `label_prefix` + (`label_start` + block index), e.g.
+/// FLOPPY0, FLOPPY1, …; an empty prefix leaves them as `NO NAME`.
 /// The frontend must confirm with the user before calling this.
 #[tauri::command]
-fn format_usb_device(index: u32, size: String, banks: u32) -> Result<String, String> {
+fn format_usb_device(
+    index: u32,
+    size: String,
+    banks: u32,
+    label_prefix: Option<String>,
+    label_start: Option<u32>,
+) -> Result<String, String> {
     let format = parse_format(&size).map_err(|e| e.to_string())?;
+    let prefix = label_prefix.unwrap_or_default();
+    let start = label_start.unwrap_or(0);
     let specs: Vec<BankSpec> = (0..banks)
         .map(|i| BankSpec {
             index: i,
             format,
-            label: "NO NAME".into(),
+            label: floppyctl::numbered_label(&prefix, start.saturating_add(i)),
             files: vec![],
         })
         .collect();
