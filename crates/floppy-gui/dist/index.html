@@ -392,6 +392,12 @@
       .dropzone.admin { border-color: var(--danger); border-style: solid; color: var(--danger); }
       .dropzone.admin svg { display: none; }
 
+      .progress { position: fixed; left: 0; right: 0; bottom: 0; z-index: 75; display: flex; align-items: center; gap: 12px; padding: 9px 16px; background: var(--panel-2); border-top: 1px solid var(--line); }
+      .progress[hidden] { display: none; }
+      .progress-track { flex: 1; height: 7px; background: var(--ink); border-radius: 4px; overflow: hidden; }
+      .progress-track > i { display: block; height: 100%; width: 0; background: var(--amber); transition: width 0.1s linear; }
+      #progressPct { font-size: 12px; color: var(--muted); min-width: 44px; text-align: right; }
+
       @media (max-width: 560px) {
         header { flex-wrap: wrap; }
         .device-pick { margin-left: 0; width: 100%; }
@@ -634,6 +640,11 @@
         </div>
       </section>
     </main>
+
+    <div id="progress" class="progress" hidden>
+      <div class="progress-track"><i id="progressFill"></i></div>
+      <span id="progressPct" class="mono"></span>
+    </div>
 
     <div id="ctxMenu" class="ctx" hidden>
       <button data-act="open" data-i18n="ctx.open">Open</button>
@@ -1385,6 +1396,17 @@
       }
 
       const evt = window.__TAURI__.event;
+      if (evt && evt.listen) {
+        evt.listen("fw://progress", (e) => {
+          const p = e.payload || {};
+          const bar = $("progress");
+          if (p.phase === "done" || !p.total) { bar.hidden = true; $("progressFill").style.width = "0%"; return; }
+          bar.hidden = false;
+          const pct = Math.min(100, Math.round((p.done / p.total) * 100));
+          $("progressFill").style.width = pct + "%";
+          $("progressPct").textContent = pct + "%";
+        });
+      }
       if (evt && evt.listen) {
         const dz = () => $("dropzone");
         const active = () => $("tab-browse").classList.contains("active") && selectedBlock !== null;

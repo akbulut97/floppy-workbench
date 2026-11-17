@@ -296,7 +296,11 @@ fn main() -> Result<()> {
                 drive.model,
                 drive.size_bytes / (1024 * 1024)
             );
-            floppyctl::device::write_image_to_drive(&drive, &data, yes)?;
+            floppyctl::device::write_image_to_drive(&drive, &data, yes, |done, total| {
+                print!("\r  {:>3}%", done * 100 / total.max(1));
+                let _ = std::io::Write::flush(&mut std::io::stdout());
+            })?;
+            println!();
             println!("Done. Safely eject the drive before removing it.");
         }
     }

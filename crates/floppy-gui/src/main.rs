@@ -6,6 +6,15 @@ use floppyctl::device::{self, UsbDrive};
 use floppyctl::sfr::{build_usb_image, BankSpec, BANK_STRIDE};
 use floppyctl::{build_image, parse_format, parse_naming, BankFile};
 use serde::{Deserialize, Serialize};
+use tauri::Emitter;
+
+/// Emit a progress event the frontend's progress bar listens to.
+fn emit_progress(window: &tauri::Window, phase: &str, done: u64, total: u64) {
+    let _ = window.emit(
+        "fw://progress",
+        serde_json::json!({ "phase": phase, "done": done, "total": total }),
+    );
+}
 
 /// A block as presented to the UI.
 #[derive(Serialize)]
@@ -119,6 +128,7 @@ fn list_drives() -> Result<Vec<UsbDrive>, String> {
 /// The frontend must confirm with the user before calling this.
 #[tauri::command]
 fn format_usb_device(
+    window: tauri::Window,
     index: u32,
     size: String,
     banks: u32,
@@ -143,7 +153,11 @@ fn format_usb_device(
         .into_iter()
         .find(|d| d.index == index)
         .ok_or_else(|| format!("no removable drive with index {index}"))?;
-    device::write_image_to_drive(&drive, &img, true).map_err(|e| e.to_string())?;
+    device::write_image_to_drive(&drive, &img, true, |done, total| {
+        emit_progress(&window, "write", done, total);
+    })
+    .map_err(|e| e.to_string())?;
+    emit_progress(&window, "done", 0, 0);
     Ok(format!(
         "Formatted {} into {} x {} floppies ({:.0} MiB written)",
         drive.model,
@@ -156,14 +170,18 @@ fn format_usb_device(
 /// Write a raw image file to the selected removable drive. DESTRUCTIVE.
 /// The frontend must confirm with the user before calling this.
 #[tauri::command]
-fn write_usb(image_path: String, index: u32) -> Result<String, String> {
+fn write_usb(window: tauri::Window, image_path: String, index: u32) -> Result<String, String> {
     let data = std::fs::read(&image_path).map_err(|e| e.to_string())?;
     let drive = device::list_usb_drives()
         .map_err(|e| e.to_string())?
         .into_iter()
         .find(|d| d.index == index)
         .ok_or_else(|| format!("no removable drive with index {index}"))?;
-    device::write_image_to_drive(&drive, &data, true).map_err(|e| e.to_string())?;
+    device::write_image_to_drive(&drive, &data, true, |done, total| {
+        emit_progress(&window, "write", done, total);
+    })
+    .map_err(|e| e.to_string())?;
+    emit_progress(&window, "done", 0, 0);
     Ok(format!(
         "Wrote {} bytes to {} ({})",
         data.len(),
@@ -523,13 +541,22 @@ fn format_one_block(drive_index: u32, index: u32, label: String) -> Result<(), S
 
 /// Back up the first `banks` banks of the USB to a raw image file.
 #[tauri::command]
-fn backup_usb(drive_index: u32, banks: u32, out_path: String) -> Result<String, String> {
+fn backup_usb(
+    window: tauri::Window,
+    drive_index: u32,
+    banks: u32,
+    out_path: String,
+) -> Result<String, String> {
     let drive = find_drive(drive_index)?;
     let len = banks as usize * BANK_STRIDE;
     if len as u64 > drive.size_bytes {
         return Err("requested size is larger than the drive".into());
     }
-    let data = device::read_range(&drive, len).map_err(|e| e.to_string())?;
+    let data = device::read_range(&drive, len, |done, total| {
+        emit_progress(&window, "read", done, total);
+    })
+    .map_err(|e| e.to_string())?;
+    emit_progress(&window, "done", 0, 0);
     std::fs::write(&out_path, &data).map_err(|e| format!("{out_path}: {e}"))?;
     Ok(format!(
         "{} ({:.0} MiB)",

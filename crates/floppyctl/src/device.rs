@@ -78,12 +78,17 @@ pub fn is_elevated() -> bool {
 ///
 /// `confirm` must be `true`; the caller is responsible for obtaining explicit
 /// user confirmation first.
-pub fn write_image_to_drive(drive: &UsbDrive, data: &[u8], confirm: bool) -> Result<()> {
+pub fn write_image_to_drive(
+    drive: &UsbDrive,
+    data: &[u8],
+    confirm: bool,
+    on_progress: impl Fn(u64, u64),
+) -> Result<()> {
     if !confirm {
         bail!("write not confirmed");
     }
     check_write_target(drive, data.len() as u64)?;
-    write_at(drive, 0, data)
+    write_at(drive, 0, data, on_progress)
 }
 
 /// Overwrite a single bank (one 1.44MB floppy) in place on the device.
@@ -98,7 +103,7 @@ pub fn write_bank(drive: &UsbDrive, index: u32, image: &[u8]) -> Result<()> {
             image.len()
         );
     }
-    write_at(drive, bank_offset(index) as u64, image)
+    write_at(drive, bank_offset(index) as u64, image, |_, _| {})
 }
 
 // ----------------------------------------------------------------------------
@@ -213,7 +218,7 @@ pub fn read_bank(_drive: &UsbDrive, _index: u32) -> Result<Vec<u8>> {
 
 /// Read `len` bytes from the start of the drive (for backing up the USB).
 #[cfg(windows)]
-pub fn read_range(drive: &UsbDrive, len: usize) -> Result<Vec<u8>> {
+pub fn read_range(drive: &UsbDrive, len: usize, on_progress: impl Fn(u64, u64)) -> Result<Vec<u8>> {
     use windows::Win32::Foundation::{CloseHandle, GENERIC_READ};
     use windows::Win32::Storage::FileSystem::ReadFile;
 
@@ -231,6 +236,7 @@ pub fn read_range(drive: &UsbDrive, len: usize) -> Result<Vec<u8>> {
                 bail!("read failed at offset {pos}");
             }
             pos += read as usize;
+            on_progress(pos as u64, len as u64);
         }
         let _ = CloseHandle(handle);
         Ok(buf)
@@ -238,7 +244,7 @@ pub fn read_range(drive: &UsbDrive, len: usize) -> Result<Vec<u8>> {
 }
 
 #[cfg(not(windows))]
-pub fn read_range(_drive: &UsbDrive, _len: usize) -> Result<Vec<u8>> {
+pub fn read_range(_drive: &UsbDrive, _len: usize, _on_progress: impl Fn(u64, u64)) -> Result<Vec<u8>> {
     bail!("raw device reading is currently only implemented on Windows")
 }
 
@@ -276,13 +282,19 @@ pub fn read_bank_headers(_drive: &UsbDrive, _count: u32) -> Result<Vec<Vec<u8>>>
 
 /// Write `data` to `drive` starting at `offset`, locking the disk's volumes first.
 #[cfg(windows)]
-fn write_at(drive: &UsbDrive, offset: u64, data: &[u8]) -> Result<()> {
+fn write_at(
+    drive: &UsbDrive,
+    offset: u64,
+    data: &[u8],
+    on_progress: impl Fn(u64, u64),
+) -> Result<()> {
     use windows::Win32::Foundation::{CloseHandle, GENERIC_READ, GENERIC_WRITE};
     use windows::Win32::Storage::FileSystem::{SetFilePointerEx, WriteFile, FILE_BEGIN};
 
     if !data.len().is_multiple_of(512) {
         bail!("image size {} is not a multiple of 512", data.len());
     }
+    let total = data.len() as u64;
 
     unsafe {
         let volumes = win::lock_disk_volumes(drive.index);
@@ -301,6 +313,7 @@ fn write_at(drive: &UsbDrive, offset: u64, data: &[u8]) -> Result<()> {
                 let mut written = 0u32;
                 WriteFile(disk, Some(chunk), Some(&mut written), None)?;
                 written_total += written as usize;
+                on_progress(written_total as u64, total);
             }
             if written_total != data.len() {
                 bail!("short write: {written_total} of {} bytes", data.len());
@@ -315,7 +328,7 @@ fn write_at(drive: &UsbDrive, offset: u64, data: &[u8]) -> Result<()> {
 }
 
 #[cfg(not(windows))]
-fn write_at(_drive: &UsbDrive, _offset: u64, _data: &[u8]) -> Result<()> {
+fn write_at(_drive: &UsbDrive, _offset: u64, _data: &[u8], _on_progress: impl Fn(u64, u64)) -> Result<()> {
     bail!("raw device writing is currently only implemented on Windows")
 }
 
