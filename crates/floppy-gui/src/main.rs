@@ -294,7 +294,7 @@ fn mkdir_in_bank(
     })
 }
 
-/// Add dropped files into directory `path`.
+/// Add dropped/picked files and folders (recursively) into directory `path`.
 #[tauri::command]
 fn add_files_in_dir(
     drive_index: u32,
@@ -304,17 +304,24 @@ fn add_files_in_dir(
 ) -> Result<DirView, String> {
     mutate_bank(drive_index, index, &path, |img| {
         for p in &files {
-            let data = std::fs::read(p).map_err(|e| format!("{p}: {e}"))?;
             let name = std::path::Path::new(p)
                 .file_name()
                 .and_then(|n| n.to_str())
                 .ok_or_else(|| format!("invalid file name: {p}"))?
                 .to_uppercase();
-            floppyctl::fsops::add_file_at(img, &path, &name, &data)
+            let tree = floppyctl::fsops::read_host_tree(std::path::Path::new(p))
+                .map_err(|e| format!("{p}: {e}"))?;
+            floppyctl::fsops::write_tree(img, &join_path(&path, &name), &tree)
                 .map_err(|e| format!("{name}: {e} (floppy full?)"))?;
         }
         Ok(())
     })
+}
+
+/// Files/folders copied in Windows Explorer, plus the clipboard sequence number.
+#[tauri::command]
+fn clipboard_files() -> floppyctl::clipboard::ClipboardFiles {
+    floppyctl::clipboard::clipboard_files()
 }
 
 /// Delete entries (files or folders, recursively) named `names` inside `path`.
@@ -529,6 +536,7 @@ fn main() {
             browse_bank,
             mkdir_in_bank,
             add_files_in_dir,
+            clipboard_files,
             delete_in_dir,
             rename_in_dir,
             export_file,

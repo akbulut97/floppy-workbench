@@ -538,7 +538,7 @@
               </div>
               <div class="pane-tools">
                 <button class="ghost" id="upBtn" disabled data-i18n-title="tb.up" title="Up one folder">↑</button>
-                <button class="ghost" id="addBtn" disabled data-i18n="tb.add" data-i18n-title="tb.addTitle" title="Add files from your PC">Add files</button>
+                <button class="ghost" id="addBtn" disabled data-i18n="tb.add" data-i18n-title="tb.addTitle" title="Add files or folders from your PC">Add ▾</button>
                 <button class="ghost" id="newFolderBtn" disabled data-i18n="tb.newFolder" data-i18n-title="tb.newFolder" title="New folder">New folder</button>
                 <button class="ghost" id="renameBtn" disabled data-i18n="tb.rename" data-i18n-title="tb.renameTitle" title="Rename selected (F2)">Rename</button>
                 <button class="ghost" id="pasteBtn" disabled data-i18n="tb.paste" data-i18n-title="tb.pasteTitle" title="Paste (Ctrl+V)">Paste</button>
@@ -630,6 +630,11 @@
       <button data-act="delete" class="danger-item" data-i18n="ctx.delete">Delete</button>
     </div>
 
+    <div id="addMenu" class="ctx" hidden>
+      <button data-add="files" data-i18n="add.files">Files…</button>
+      <button data-add="folder" data-i18n="add.folder">Folder…</button>
+    </div>
+
     <div id="blockCtx" class="ctx" hidden>
       <button data-bact="open" data-i18n="ctx.open">Open</button>
       <button data-bact="rename" data-i18n="bctx.rename">Rename block…</button>
@@ -676,16 +681,18 @@
           "format.lead": "Divide the selected USB into evenly sized floppy blocks the emulator can switch between.",
           "format.floppyFormat": "Floppy format", "format.numFloppies": "Number of floppies",
           "format.options": "Options", "format.quick": "Quick format", "format.begin": "Begin to format",
+          "format.labelPrefix": "Block name", "format.labelStart": "Start number",
+          "dyn.labelPreview": "Labels: {first}, {second} … {last}", "dyn.labelNone": "Blocks will be unnamed (NO NAME).",
           "format.warn": "Erases the entire USB. Only removable drives are listed. Needs Administrator.",
           "format.bootNote": "Bootable DOS floppies need FreeDOS system files, which aren't bundled yet. Prefer not to write directly? Build an image file under Advanced and flash it with Rufus or dd.",
           "browse.title": "Browse blocks",
           "browse.lead": "Each block is one floppy on the USB. Pick a block to see its files, then drag files in.",
           "browse.blocks": "Blocks", "browse.scan": "Scan", "browse.countTitle": "How many blocks to list",
-          "format.labelPrefix": "Block name", "format.labelStart": "Start number",
-          "dyn.labelPreview": "Labels: {first}, {second} … {last}", "dyn.labelNone": "Blocks will be unnamed (NO NAME).",
           "browse.chooseScan": "Choose a USB, then Scan.", "browse.noBlock": "No block selected",
-          "browse.selectLeft": "Select a block on the left.", "browse.dropHere": "Drop files here to add them to",
-          "tb.up": "Up one folder", "tb.add": "Add files", "tb.addTitle": "Add files from your PC",
+          "browse.selectLeft": "Select a block on the left.", "browse.dropHere": "Drop files/folders here, or copy them in Explorer and paste (Ctrl+V), to add them to",
+          "tb.up": "Up one folder", "tb.add": "Add ▾", "tb.addTitle": "Add files or folders from your PC",
+          "add.files": "Files…", "add.folder": "Folder…",
+          "dyn.nothingToPaste": "Nothing to paste. Copy items here, or copy files/folders in Explorer (Ctrl+C).",
           "tb.newFolder": "New folder", "tb.rename": "Rename", "tb.renameTitle": "Rename selected (F2)",
           "tb.paste": "Paste", "tb.pasteTitle": "Paste (Ctrl+V)", "tb.export": "Export",
           "tb.exportTitle": "Save selected files to your PC", "tb.delete": "Delete", "tb.deleteTitle": "Delete selected (Del)",
@@ -718,7 +725,7 @@
           "dyn.saved1": "Saved → {dest}", "dyn.chooseDestFolder": "Choose a destination folder",
           "dyn.savedN": "Saved {n} file(s) → {dest}", "dyn.truncated": "\n\n… (truncated — open the exported file for the rest)",
           "dyn.binary": "Binary file · {size} bytes. Use “Save as…” to export it.",
-          "dyn.addFilesTitle": "Add files to this folder",
+          "dyn.addFilesTitle": "Add files to this folder", "dyn.addFolderTitle": "Choose folder(s) to add",
           "dyn.useDragDrop": "Drag & drop files onto the drop zone to add them.", "dyn.added": "Added {n} file(s).",
           "dyn.copied": "Copied {n} item(s). Go to a folder and Paste.", "dyn.cutMsg": "Cut {n} item(s). Go to a folder and Paste.",
           "dyn.pasting": "Pasting…", "dyn.pasted": "Pasted {n} item(s).",
@@ -738,16 +745,18 @@
           "format.lead": "Seçili USB'yi, emülatörün geçiş yapabileceği eşit boyutlu disket bloklarına bölün.",
           "format.floppyFormat": "Disket biçimi", "format.numFloppies": "Disket sayısı",
           "format.options": "Seçenekler", "format.quick": "Hızlı format", "format.begin": "Formatlamaya başla",
+          "format.labelPrefix": "Blok adı", "format.labelStart": "Başlangıç numarası",
+          "dyn.labelPreview": "Etiketler: {first}, {second} … {last}", "dyn.labelNone": "Bloklar isimsiz olur (NO NAME).",
           "format.warn": "Tüm USB'yi siler. Yalnızca çıkarılabilir sürücüler listelenir. Yönetici gerekir.",
           "format.bootNote": "Açılabilir DOS disketleri için FreeDOS sistem dosyaları gerekir (henüz pakete dahil değil). Doğrudan yazmak istemiyorsanız Gelişmiş sekmesinde bir imaj dosyası oluşturup Rufus veya dd ile yazın.",
           "browse.title": "Blokları gözat",
           "browse.lead": "Her blok, USB'deki bir diskettir. Dosyalarını görmek için bir blok seçin, sonra dosyaları sürükleyin.",
           "browse.blocks": "Bloklar", "browse.scan": "Tara", "browse.countTitle": "Kaç blok listelensin",
           "browse.chooseScan": "Bir USB seçin, sonra Tara'ya basın.", "browse.noBlock": "Blok seçilmedi",
-          "browse.selectLeft": "Soldan bir blok seçin.", "browse.dropHere": "Dosyaları buraya bırakın —",
-          "format.labelPrefix": "Blok adı", "format.labelStart": "Başlangıç numarası",
-          "dyn.labelPreview": "Etiketler: {first}, {second} … {last}", "dyn.labelNone": "Bloklar isimsiz olur (NO NAME).",
-          "tb.up": "Bir üst klasör", "tb.add": "Dosya ekle", "tb.addTitle": "PC'den dosya ekle",
+          "browse.selectLeft": "Soldan bir blok seçin.", "browse.dropHere": "Dosya/klasörleri buraya bırakın ya da Gezgin'de kopyalayıp yapıştırın (Ctrl+V) —",
+          "tb.up": "Bir üst klasör", "tb.add": "Ekle ▾", "tb.addTitle": "PC'den dosya veya klasör ekle",
+          "add.files": "Dosyalar…", "add.folder": "Klasör…",
+          "dyn.nothingToPaste": "Yapıştırılacak bir şey yok. Burada öğe kopyalayın ya da Gezgin'de dosya/klasör kopyalayın (Ctrl+C).",
           "tb.newFolder": "Yeni klasör", "tb.rename": "Yeniden adlandır", "tb.renameTitle": "Seçiliyi yeniden adlandır (F2)",
           "tb.paste": "Yapıştır", "tb.pasteTitle": "Yapıştır (Ctrl+V)", "tb.export": "Dışa aktar",
           "tb.exportTitle": "Seçili dosyaları PC'ye kaydet", "tb.delete": "Sil", "tb.deleteTitle": "Seçiliyi sil (Del)",
@@ -780,7 +789,7 @@
           "dyn.saved1": "Kaydedildi → {dest}", "dyn.chooseDestFolder": "Hedef klasör seçin",
           "dyn.savedN": "{n} dosya kaydedildi → {dest}", "dyn.truncated": "\n\n… (kırpıldı — tamamı için dışa aktarılan dosyayı açın)",
           "dyn.binary": "İkili dosya · {size} bayt. Dışa aktarmak için “Farklı kaydet…” kullanın.",
-          "dyn.addFilesTitle": "Bu klasöre dosya ekle",
+          "dyn.addFilesTitle": "Bu klasöre dosya ekle", "dyn.addFolderTitle": "Eklenecek klasör(ler)i seçin",
           "dyn.useDragDrop": "Dosya eklemek için bırakma alanına sürükleyip bırakın.", "dyn.added": "{n} dosya eklendi.",
           "dyn.copied": "{n} öğe kopyalandı. Bir klasöre gidip Yapıştır'a basın.", "dyn.cutMsg": "{n} öğe kesildi. Bir klasöre gidip Yapıştır'a basın.",
           "dyn.pasting": "Yapıştırılıyor…", "dyn.pasted": "{n} öğe yapıştırıldı.",
@@ -811,6 +820,7 @@
         const sel = $("langSel"); if (sel) sel.value = LANG;
         applyI18n();
         if (typeof refreshSummary === "function") refreshSummary();
+        if (typeof refreshLabelPreview === "function") refreshLabelPreview();
       }
       $("settingsBtn").addEventListener("click", (e) => { e.stopPropagation(); $("settingsPanel").hidden = !$("settingsPanel").hidden; });
       $("langSel").addEventListener("change", (e) => setLang(e.target.value));
@@ -820,7 +830,6 @@
 
       // ---- Custom window controls (frameless) ----
       const appWindow =
-        if (typeof refreshLabelPreview === "function") refreshLabelPreview();
         window.__TAURI__ && window.__TAURI__.window && window.__TAURI__.window.getCurrentWindow
           ? window.__TAURI__.window.getCurrentWindow()
           : null;
@@ -892,15 +901,6 @@
       $("fmtBanks").addEventListener("change", refreshSummary);
       $("fmtDisks").addEventListener("change", refreshSummary);
 
-      async function beginFormat() {
-        const index = selectedDrive();
-        if (isNaN(index)) { setStatus($("fmtStatus"), t("dyn.chooseTop"), "err"); return; }
-        const size = fmtSel();
-        const banks = parseInt($("fmtBanks").value, 10);
-        const d = drives.find((x) => x.index === index);
-        if (!confirm(t("dyn.formatConfirm", { model: d ? d.model : "the drive", banks, size }))) return;
-        setStatus($("fmtStatus"), t("dyn.formatting", { banks }));
-        try {
       // Mirrors floppyctl::numbered_label (the backend is authoritative).
       function numberedLabel(prefix, n) {
         // Replace before upper-casing: JS maps e.g. "ı" to ASCII "I", Rust's to_ascii_uppercase doesn't.
@@ -921,13 +921,22 @@
       ["fmtPrefix", "fmtStart"].forEach((id) => $(id).addEventListener("input", refreshLabelPreview));
       $("fmtBanks").addEventListener("change", refreshLabelPreview);
 
+      async function beginFormat() {
+        const index = selectedDrive();
+        if (isNaN(index)) { setStatus($("fmtStatus"), t("dyn.chooseTop"), "err"); return; }
+        const size = fmtSel();
+        const banks = parseInt($("fmtBanks").value, 10);
+        const labelPrefix = $("fmtPrefix").value.trim();
+        const labelStart = fmtStart();
+        const d = drives.find((x) => x.index === index);
+        if (!confirm(t("dyn.formatConfirm", { model: d ? d.model : "the drive", banks, size }))) return;
+        setStatus($("fmtStatus"), t("dyn.formatting", { banks }));
+        try {
           const msg = await invoke("format_usb_device", { index, size, banks, labelPrefix, labelStart });
           setStatus($("fmtStatus"), t("dyn.wroteSafe", { msg }), "ok");
         } catch (e) { setStatus($("fmtStatus"), "" + e, "err"); }
       }
       $("fmtBegin").addEventListener("click", beginFormat);
-        const labelPrefix = $("fmtPrefix").value.trim();
-        const labelStart = fmtStart();
 
       // ---- Browse (Explorer) ----
       let selectedBlock = null;
@@ -951,7 +960,7 @@
         $("addBtn").disabled = !hasBlock;
         $("newFolderBtn").disabled = !hasBlock;
         $("renameBtn").disabled = names.length !== 1;
-        $("pasteBtn").disabled = !clip || !hasBlock;
+        $("pasteBtn").disabled = !hasBlock; // in-app clip or Explorer copy
         $("exportBtn").disabled = !exportable;
         $("deleteBtn").disabled = names.length === 0;
         updateDetails();
@@ -1118,24 +1127,40 @@
       $("previewModal").addEventListener("click", (e) => { if (e.target.id === "previewModal") closePreview(); });
       document.addEventListener("keydown", (e) => { if (e.key === "Escape" && !$("previewModal").hidden) closePreview(); });
 
-      async function addFiles() {
+      async function addFiles(folders) {
         if (selectedBlock === null) return;
         if (!dialog || !dialog.open) { setStatus($("readStatus"), t("dyn.useDragDrop"), "err"); return; }
-        const picked = await dialog.open({ multiple: true, title: t("dyn.addFilesTitle") });
+        const picked = await dialog.open(folders === true
+          ? { multiple: true, directory: true, title: t("dyn.addFolderTitle") }
+          : { multiple: true, title: t("dyn.addFilesTitle") });
         if (!picked) return;
         const files = Array.isArray(picked) ? picked : [picked];
         runOp(() => invoke("add_files_in_dir", { driveIndex: selectedDrive(), index: selectedBlock, path: currentPath, files }), t("dyn.added", { n: files.length }));
       }
 
-      function copySel(cut) {
+      // OS clipboard: files/folders copied in Windows Explorer (+ a sequence number
+      // that changes on every copy anywhere, so we can tell which copy is newer).
+      async function osClipboard() {
+        try { return await invoke("clipboard_files"); } catch (e) { return { seq: -1, paths: [] }; }
+      }
+
+      async function copySel(cut) {
         if (!selectedNames.size) return;
-        clip = { srcIndex: selectedBlock, srcPath: currentPath, names: [...selectedNames], cut };
+        clip = { srcIndex: selectedBlock, srcPath: currentPath, names: [...selectedNames], cut, seq: (await osClipboard()).seq };
         setStatus($("readStatus"), t(cut ? "dyn.cutMsg" : "dyn.copied", { n: clip.names.length }), "");
         updateToolbar();
       }
 
       async function paste() {
-        if (!clip || selectedBlock === null) return;
+        if (selectedBlock === null) return;
+        // Explorer copy wins if it happened after the last in-app copy.
+        const os = await osClipboard();
+        if (os.paths.length && (!clip || os.seq !== clip.seq)) {
+          const files = os.paths;
+          runOp(() => invoke("add_files_in_dir", { driveIndex: selectedDrive(), index: selectedBlock, path: currentPath, files }), t("dyn.added", { n: files.length }));
+          return;
+        }
+        if (!clip) { setStatus($("readStatus"), t("dyn.nothingToPaste"), "err"); return; }
         const c = clip;
         setStatus($("readStatus"), t("dyn.pasting"));
         try {
@@ -1152,7 +1177,21 @@
       }
 
       $("upBtn").addEventListener("click", () => { if (currentPath) browse(parentOf(currentPath)); });
-      $("addBtn").addEventListener("click", addFiles);
+      $("addBtn").addEventListener("click", (e) => {
+        e.stopPropagation();
+        const m = $("addMenu");
+        if (!m.hidden) { closeCtx(); return; }
+        closeCtx();
+        const r = $("addBtn").getBoundingClientRect();
+        m.hidden = false;
+        m.style.left = Math.min(r.left, window.innerWidth - 150) + "px";
+        m.style.top = r.bottom + 4 + "px";
+      });
+      $("addMenu").addEventListener("click", (e) => {
+        const kind = e.target.dataset.add;
+        closeCtx();
+        if (kind) addFiles(kind === "folder");
+      });
       $("newFolderBtn").addEventListener("click", newFolder);
       $("renameBtn").addEventListener("click", renameSel);
       $("pasteBtn").addEventListener("click", paste);
@@ -1160,6 +1199,7 @@
       $("deleteBtn").addEventListener("click", deleteSel);
       document.addEventListener("keydown", (e) => {
         if (!$("tab-browse").classList.contains("active")) return;
+        if (e.target.closest && e.target.closest("input, textarea, select, [contenteditable]")) return;
         const ctrl = e.ctrlKey || e.metaKey;
         if (e.key === "Delete" && selectedNames.size) deleteSel();
         else if (e.key === "F2" && selectedNames.size === 1) renameSel();
@@ -1177,14 +1217,14 @@
         m.querySelector('[data-act="open"]').style.display = isDir ? "block" : "none";
         m.querySelector('[data-act="cut"]').style.display = names.length ? "block" : "none";
         m.querySelector('[data-act="copy"]').style.display = names.length ? "block" : "none";
-        m.querySelector('[data-act="paste"]').style.display = clip ? "block" : "none";
+        m.querySelector('[data-act="paste"]').style.display = "block"; // may paste from Explorer too
         m.querySelector('[data-act="rename"]').style.display = single ? "block" : "none";
         m.querySelector('[data-act="export"]').style.display = names.some((n) => !(entryByName(n) || {}).is_dir) ? "block" : "none";
         m.hidden = false;
         m.style.left = Math.min(x, window.innerWidth - 150) + "px";
         m.style.top = Math.min(y, window.innerHeight - 150) + "px";
       }
-      function closeCtx() { $("ctxMenu").hidden = true; $("blockCtx").hidden = true; }
+      function closeCtx() { $("ctxMenu").hidden = true; $("blockCtx").hidden = true; $("addMenu").hidden = true; }
 
       // ---- Block (left pane) context menu ----
       function openBlockCtx(x, y) {
@@ -1383,8 +1423,8 @@
       try { savedLang = localStorage.getItem("fw_lang") || "en"; } catch (e) {}
       setLang(savedLang);
       refreshSummary();
+      refreshLabelPreview();
       rescan();
     </script>
   </body>
 </html>
-      refreshLabelPreview();

@@ -109,3 +109,44 @@ fn rename_into_another_folder() {
     assert_eq!(names(&img, ""), vec!["DEST"]);
     assert_eq!(names(&img, "DEST"), vec!["F.TXT"]);
 }
+
+#[test]
+fn add_host_folder_recursively() {
+    use floppyctl::fsops::read_host_tree;
+    let tmp = tempfile::tempdir().unwrap();
+    let base = tmp.path().join("Proj");
+    std::fs::create_dir_all(base.join("sub").join("deep")).unwrap();
+    std::fs::write(base.join("readme.txt"), b"hello").unwrap();
+    std::fs::write(base.join("sub").join("a.bin"), vec![7u8; 3000]).unwrap();
+    std::fs::write(base.join("sub").join("deep").join("z.txt"), b"zz").unwrap();
+
+    let mut img = blank();
+    let tree = read_host_tree(&base).unwrap();
+    write_tree(&mut img, "PROJ", &tree).unwrap();
+
+    assert_eq!(names(&img, ""), vec!["PROJ"]);
+    assert_eq!(names(&img, "PROJ"), vec!["README.TXT", "SUB"]);
+    assert_eq!(names(&img, "PROJ/SUB"), vec!["A.BIN", "DEEP"]);
+    assert_eq!(read_file_at(&img, "PROJ/README.TXT").unwrap(), b"hello");
+    assert_eq!(read_file_at(&img, "PROJ/SUB/A.BIN").unwrap(), vec![7u8; 3000]);
+    assert_eq!(read_file_at(&img, "PROJ/SUB/DEEP/Z.TXT").unwrap(), b"zz");
+
+    // Adding the same folder again merges/overwrites instead of failing.
+    std::fs::write(base.join("readme.txt"), b"v2").unwrap();
+    let tree = read_host_tree(&base).unwrap();
+    write_tree(&mut img, "PROJ", &tree).unwrap();
+    assert_eq!(read_file_at(&img, "PROJ/README.TXT").unwrap(), b"v2");
+    assert_eq!(names(&img, "PROJ"), vec!["README.TXT", "SUB"]);
+}
+
+#[test]
+fn read_host_tree_single_file() {
+    use floppyctl::fsops::read_host_tree;
+    let tmp = tempfile::tempdir().unwrap();
+    let f = tmp.path().join("x.txt");
+    std::fs::write(&f, b"abc").unwrap();
+    let tree = read_host_tree(&f).unwrap();
+    assert_eq!(tree.len(), 1);
+    assert!(!tree[0].is_dir);
+    assert_eq!(tree[0].data, b"abc");
+}

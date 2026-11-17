@@ -160,6 +160,39 @@ pub fn read_tree(img: &[u8], path: &str) -> Result<Vec<TreeNode>> {
     Ok(nodes)
 }
 
+/// Read a file or folder from the host filesystem into a subtree for [`write_tree`].
+/// Names are upper-cased (DOS convention, matching single-file adds). Parents come
+/// before children.
+pub fn read_host_tree(path: &std::path::Path) -> Result<Vec<TreeNode>> {
+    let meta = std::fs::metadata(path)?;
+    if !meta.is_dir() {
+        let data = std::fs::read(path)?;
+        return Ok(vec![TreeNode { rel: String::new(), is_dir: false, data }]);
+    }
+    let mut nodes = vec![TreeNode { rel: String::new(), is_dir: true, data: Vec::new() }];
+    let mut queue = vec![(path.to_path_buf(), String::new())];
+    while let Some((dir, rel_prefix)) = queue.pop() {
+        let mut entries: Vec<_> = std::fs::read_dir(&dir)?.collect::<std::io::Result<_>>()?;
+        entries.sort_by_key(|e| e.file_name());
+        for e in entries {
+            let name = e
+                .file_name()
+                .into_string()
+                .map_err(|n| anyhow::anyhow!("invalid file name: {n:?}"))?
+                .to_uppercase();
+            let rel = join(&rel_prefix, &name);
+            if e.file_type()?.is_dir() {
+                nodes.push(TreeNode { rel: rel.clone(), is_dir: true, data: Vec::new() });
+                queue.push((e.path(), rel));
+            } else {
+                let data = std::fs::read(e.path())?;
+                nodes.push(TreeNode { rel, is_dir: false, data });
+            }
+        }
+    }
+    Ok(nodes)
+}
+
 /// Write a subtree (from [`read_tree`]) under `dst_base`.
 pub fn write_tree(img: &mut [u8], dst_base: &str, nodes: &[TreeNode]) -> Result<()> {
     let fs = FileSystem::new(Cursor::new(&mut *img), FsOptions::new())?;

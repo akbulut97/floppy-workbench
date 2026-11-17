@@ -2,6 +2,7 @@
 //! file IO so it can be unit-tested.
 
 pub mod blockset;
+pub mod clipboard;
 pub mod device;
 pub mod fsops;
 pub mod sfr;
@@ -86,7 +87,6 @@ pub fn inspect(img: &[u8]) -> Result<ImageInfo> {
     })
 }
 
-/// Parse a human size string (`"720"`, `"1.2"`, `"1.44"`) into a [`FloppyFormat`].
 /// Build a numbered volume label: `prefix` + `number` (e.g. `FLOPPY0`, `FLOPPY1`, …).
 ///
 /// The prefix is upper-cased, characters DOS forbids in labels become `_`, and it
@@ -109,6 +109,7 @@ pub fn numbered_label(prefix: &str, number: u32) -> String {
     format!("{}{num}", head.trim_end())
 }
 
+/// Parse a human size string (`"720"`, `"1.2"`, `"1.44"`) into a [`FloppyFormat`].
 pub fn parse_format(s: &str) -> Result<FloppyFormat> {
     Ok(match s.trim() {
         "720" | "720k" | "720K" => FloppyFormat::F720K,
