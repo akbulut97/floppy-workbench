@@ -57,7 +57,7 @@ Reverse‑engineered and reproduced by this tool:
 - There is **no partition table** — the device selects a bank by index (front‑panel display).
 - U100 = 100 banks; U100K = 1000 banks. Windows mounts only bank 000 (offset 0).
 
-See [`TEKNIK_RAPOR.md`](TEKNIK_RAPOR.md) (Turkish) for the full technical report.
+See [`TECHNICAL_REPORT.md`](TECHNICAL_REPORT.md) for the full technical report ([Turkish](TEKNIK_RAPOR.md)).
 
 ---
 

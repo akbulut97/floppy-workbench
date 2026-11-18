@@ -1,5 +1,7 @@
 # USB Floppy Emulator Yönetim Yazılımı — Teknik Analiz ve Geliştirme Raporu
 
+[English](TECHNICAL_REPORT.md) · **Türkçe**
+
 **Referans uygulama:** ipcas GmbH *USB Floppy Emulator V2 (FDEv2)* v1.40i
 **Gerçek motor:** WCH / WinChipHead "SFD UFloppyManager II" (rebrand)
 **Rapor tarihi:** 2026-11-16

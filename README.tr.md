@@ -55,7 +55,7 @@ Bu araç tarafından tersine mühendislikle çözülüp yeniden üretilir:
 - **Partition tablosu yoktur** — cihaz bankayı indeksle seçer (ön panel ekranı).
 - U100 = 100 banka; U100K = 1000 banka. Windows yalnızca banka 000'ı (ofset 0) bağlar.
 
-Tam teknik rapor için: [`TEKNIK_RAPOR.md`](TEKNIK_RAPOR.md).
+Tam teknik rapor için: [`TEKNIK_RAPOR.md`](TEKNIK_RAPOR.md) ([İngilizce](TECHNICAL_REPORT.md)).
 
 ---
 
