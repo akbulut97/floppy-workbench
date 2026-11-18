@@ -76,6 +76,29 @@ pub fn is_elevated() -> bool {
     nix::is_root()
 }
 
+/// Index of the first byte where `a` and `b` differ (a length difference counts
+/// at the shorter length), or `None` if they are identical.
+pub fn first_mismatch(a: &[u8], b: &[u8]) -> Option<usize> {
+    a.iter()
+        .zip(b)
+        .position(|(x, y)| x != y)
+        .or_else(|| (a.len() != b.len()).then(|| a.len().min(b.len())))
+}
+
+/// Read back `expected.len()` bytes at `offset` and fail if they differ.
+pub fn verify_region(
+    drive: &UsbDrive,
+    offset: u64,
+    expected: &[u8],
+    on_progress: impl Fn(u64, u64),
+) -> Result<()> {
+    let got = read_region(drive, offset, expected.len(), on_progress)?;
+    if let Some(pos) = first_mismatch(&got, expected) {
+        bail!("verification failed at byte {}", offset + pos as u64);
+    }
+    Ok(())
+}
+
 /// Write `data` to the selected removable drive, starting at sector 0. **Destructive.**
 ///
 /// `confirm` must be `true`; the caller is responsible for obtaining explicit
@@ -105,7 +128,10 @@ pub fn write_bank(drive: &UsbDrive, index: u32, image: &[u8]) -> Result<()> {
             image.len()
         );
     }
-    write_at(drive, bank_offset(index) as u64, image, |_, _| {})
+    let offset = bank_offset(index) as u64;
+    write_at(drive, offset, image, |_, _| {})?;
+    // Read the bank back and compare, so a bad write never goes unnoticed.
+    verify_region(drive, offset, image, |_, _| {})
 }
 
 // ----------------------------------------------------------------------------
@@ -179,74 +205,42 @@ pub fn list_usb_drives() -> Result<Vec<UsbDrive>> {
 }
 
 /// Read the 1.44MB FAT12 image of bank `index` directly from the drive.
-#[cfg(windows)]
 pub fn read_bank(drive: &UsbDrive, index: u32) -> Result<Vec<u8>> {
+    read_region(drive, bank_offset(index) as u64, FLOPPY_IMAGE_BYTES, |_, _| {})
+}
+
+/// Read `len` bytes from the start of the drive (for backing up the USB).
+pub fn read_range(drive: &UsbDrive, len: usize, on_progress: impl Fn(u64, u64)) -> Result<Vec<u8>> {
+    read_region(drive, 0, len, on_progress)
+}
+
+/// Read `len` bytes starting at `offset` (sector-aligned) from the drive.
+#[cfg(windows)]
+pub fn read_region(
+    drive: &UsbDrive,
+    offset: u64,
+    len: usize,
+    on_progress: impl Fn(u64, u64),
+) -> Result<Vec<u8>> {
     use windows::Win32::Foundation::{CloseHandle, GENERIC_READ};
     use windows::Win32::Storage::FileSystem::{ReadFile, SetFilePointerEx, FILE_BEGIN};
 
-    let offset = bank_offset(index) as i64;
-    let len = FLOPPY_IMAGE_BYTES;
     unsafe {
         let handle = win::open_physical(&drive.path, GENERIC_READ.0)?;
-        if let Err(e) = SetFilePointerEx(handle, offset, None, FILE_BEGIN) {
+        if let Err(e) = SetFilePointerEx(handle, offset as i64, None, FILE_BEGIN) {
             let _ = CloseHandle(handle);
             return Err(e.into());
         }
         let mut buf = vec![0u8; len];
         let mut pos = 0usize;
         while pos < len {
-            let mut read = 0u32;
-            if let Err(e) = ReadFile(handle, Some(&mut buf[pos..]), Some(&mut read), None) {
-                let _ = CloseHandle(handle);
-                return Err(e.into());
-            }
-            if read == 0 {
-                break;
-            }
-            pos += read as usize;
-        }
-        let _ = CloseHandle(handle);
-        if pos != len {
-            bail!("short read: {pos} of {len} bytes");
-        }
-        Ok(buf)
-    }
-}
-
-#[cfg(not(windows))]
-pub fn read_bank(drive: &UsbDrive, index: u32) -> Result<Vec<u8>> {
-    nix::read_at(
-        &drive.path,
-        bank_offset(index) as u64,
-        FLOPPY_IMAGE_BYTES,
-        |_, _| {},
-    )
-}
-
-/// Read `len` bytes from the start of the drive (for backing up the USB).
-#[cfg(windows)]
-pub fn read_range(drive: &UsbDrive, len: usize, on_progress: impl Fn(u64, u64)) -> Result<Vec<u8>> {
-    use windows::Win32::Foundation::{CloseHandle, GENERIC_READ};
-    use windows::Win32::Storage::FileSystem::ReadFile;
-
-    unsafe {
-        let handle = win::open_physical(&drive.path, GENERIC_READ.0)?;
-        let mut buf = vec![0u8; len];
-        let mut pos = 0usize;
-        while pos < len {
             let want = (len - pos).min(1024 * 1024);
             let mut read = 0u32;
-            if ReadFile(
-                handle,
-                Some(&mut buf[pos..pos + want]),
-                Some(&mut read),
-                None,
-            )
-            .is_err()
+            if ReadFile(handle, Some(&mut buf[pos..pos + want]), Some(&mut read), None).is_err()
                 || read == 0
             {
                 let _ = CloseHandle(handle);
-                bail!("read failed at offset {pos}");
+                bail!("read failed at offset {}", offset + pos as u64);
             }
             pos += read as usize;
             on_progress(pos as u64, len as u64);
@@ -256,9 +250,15 @@ pub fn read_range(drive: &UsbDrive, len: usize, on_progress: impl Fn(u64, u64)) 
     }
 }
 
+/// Read `len` bytes starting at `offset` (sector-aligned) from the drive.
 #[cfg(not(windows))]
-pub fn read_range(drive: &UsbDrive, len: usize, on_progress: impl Fn(u64, u64)) -> Result<Vec<u8>> {
-    nix::read_at(&drive.path, 0, len, on_progress)
+pub fn read_region(
+    drive: &UsbDrive,
+    offset: u64,
+    len: usize,
+    on_progress: impl Fn(u64, u64),
+) -> Result<Vec<u8>> {
+    nix::read_at(&drive.path, offset, len, on_progress)
 }
 
 /// Read the first 512 bytes (boot sector) of each of the first `count` banks,

@@ -134,6 +134,7 @@ fn format_usb_device(
     banks: u32,
     label_prefix: Option<String>,
     label_start: Option<u32>,
+    verify: Option<bool>,
 ) -> Result<String, String> {
     let format = parse_format(&size).map_err(|e| e.to_string())?;
     let prefix = label_prefix.unwrap_or_default();
@@ -157,6 +158,9 @@ fn format_usb_device(
         emit_progress(&window, "write", done, total);
     })
     .map_err(|e| e.to_string())?;
+    if verify.unwrap_or(true) {
+        verify_written(&window, &drive, &img)?;
+    }
     emit_progress(&window, "done", 0, 0);
     Ok(format!(
         "Formatted {} into {} x {} floppies ({:.0} MiB written)",
@@ -170,7 +174,12 @@ fn format_usb_device(
 /// Write a raw image file to the selected removable drive. DESTRUCTIVE.
 /// The frontend must confirm with the user before calling this.
 #[tauri::command]
-fn write_usb(window: tauri::Window, image_path: String, index: u32) -> Result<String, String> {
+fn write_usb(
+    window: tauri::Window,
+    image_path: String,
+    index: u32,
+    verify: Option<bool>,
+) -> Result<String, String> {
     let data = std::fs::read(&image_path).map_err(|e| e.to_string())?;
     let drive = device::list_usb_drives()
         .map_err(|e| e.to_string())?
@@ -181,6 +190,9 @@ fn write_usb(window: tauri::Window, image_path: String, index: u32) -> Result<St
         emit_progress(&window, "write", done, total);
     })
     .map_err(|e| e.to_string())?;
+    if verify.unwrap_or(true) {
+        verify_written(&window, &drive, &data)?;
+    }
     emit_progress(&window, "done", 0, 0);
     Ok(format!(
         "Wrote {} bytes to {} ({})",
@@ -545,6 +557,44 @@ fn format_one_block(drive_index: u32, index: u32, label: String) -> Result<(), S
     device::write_bank(&drive, index, &img).map_err(|e| e.to_string())
 }
 
+/// Save one block as a 1.44 MB floppy image file.
+#[tauri::command]
+fn export_bank(drive_index: u32, index: u32, dest: String) -> Result<String, String> {
+    let drive = find_drive(drive_index)?;
+    let img = device::read_bank(&drive, index).map_err(|e| e.to_string())?;
+    std::fs::write(&dest, &img).map_err(|e| format!("{dest}: {e}"))?;
+    Ok(dest)
+}
+
+/// Write a floppy image file into one block (raw copy, any floppy format the
+/// target machine uses). The write is read back and verified. DESTRUCTIVE.
+#[tauri::command]
+fn import_bank(drive_index: u32, index: u32, path: String) -> Result<(), String> {
+    let drive = find_drive(drive_index)?;
+    let data = std::fs::read(&path).map_err(|e| format!("{path}: {e}"))?;
+    let img = floppyctl::sfr::normalize_bank_image(&data).map_err(|e| e.to_string())?;
+    device::write_bank(&drive, index, img).map_err(|e| e.to_string())
+}
+
+/// Copy block `src` onto block `dst` byte for byte (verified). DESTRUCTIVE for `dst`.
+#[tauri::command]
+fn clone_bank(drive_index: u32, src: u32, dst: u32) -> Result<(), String> {
+    if src == dst {
+        return Err("source and target block are the same".into());
+    }
+    let drive = find_drive(drive_index)?;
+    let img = device::read_bank(&drive, src).map_err(|e| e.to_string())?;
+    device::write_bank(&drive, dst, &img).map_err(|e| e.to_string())
+}
+
+/// Read a whole-USB write back and compare it, reporting "verify" progress.
+fn verify_written(window: &tauri::Window, drive: &UsbDrive, data: &[u8]) -> Result<(), String> {
+    device::verify_region(drive, 0, data, |done, total| {
+        emit_progress(window, "verify", done, total);
+    })
+    .map_err(|e| e.to_string())
+}
+
 /// Back up the first `banks` banks of the USB to a raw image file.
 #[tauri::command]
 fn backup_usb(
@@ -632,7 +682,10 @@ fn main() {
             is_elevated,
             make_bank_bootable,
             backup_usb,
-            format_block_range
+            format_block_range,
+            export_bank,
+            import_bank,
+            clone_bank
         ])
         .run(tauri::generate_context!())
         .expect("error while running tauri application");

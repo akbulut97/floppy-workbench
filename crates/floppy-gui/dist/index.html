@@ -492,6 +492,7 @@
             <label class="field" style="margin: 0">
               <span class="lbl" data-i18n="format.options">Options</span>
               <label style="font-size: 13px"><input type="checkbox" id="fmtQuick" checked /> <span data-i18n="format.quick">Quick format</span></label>
+              <label style="font-size: 13px"><input type="checkbox" id="fmtVerify" checked /> <span data-i18n="opt.verify">Verify after writing</span></label>
             </label>
           </div>
 
@@ -598,6 +599,7 @@
             <span class="lbl" data-i18n="adv.imageFile">Image file</span>
             <input id="writeImg" placeholder="C:\path\usb.img" style="width: 100%" />
           </label>
+          <label style="font-size: 13px; display: block; margin-bottom: 10px"><input type="checkbox" id="writeVerify" checked /> <span data-i18n="opt.verify">Verify after writing</span></label>
           <button class="danger" id="writeBtn" data-i18n="adv.writeBtn">Write to selected USB</button>
           <p class="warn" data-i18n="adv.writeWarn">Writes to the device chosen in the top bar and erases it. Needs Administrator.</p>
           <p class="status" id="writeStatus"></p>
@@ -668,6 +670,9 @@
       <button data-bact="bootable" data-i18n="bctx.bootable">Make bootable (FreeDOS)…</button>
       <button data-bact="format" class="danger-item" data-i18n="bctx.format">Format block…</button>
       <button data-bact="formatrange" class="danger-item" data-i18n="bctx.formatRange">Format range…</button>
+      <button data-bact="export" data-i18n="bctx.export">Save as .img…</button>
+      <button data-bact="import" class="danger-item" data-i18n="bctx.import">Load .img into block…</button>
+      <button data-bact="clone" class="danger-item" data-i18n="bctx.clone">Copy to block…</button>
     </div>
 
     <div class="rz rz-n" data-dir="North"></div>
@@ -746,6 +751,14 @@
           "ctx.export": "Export", "ctx.delete": "Delete", "bctx.rename": "Rename block…", "bctx.format": "Format block…",
           "bctx.bootable": "Make bootable (FreeDOS)…", "bctx.formatRange": "Format range…",
           "dyn.formatRangePrompt": "How many blocks to format, starting at block {i}?", "dyn.formatRangeConfirm": "Format blocks {from}–{to} as blank 1.44M floppies? Everything on them is erased.", "dyn.rangeDone": "Blocks {from}–{to} formatted.",
+          "bctx.export": "Save as .img…", "bctx.import": "Load .img into block…", "bctx.clone": "Copy to block…",
+          "opt.verify": "Verify after writing", "dyn.verifying": "Verifying",
+          "dyn.importTitle": "Choose a floppy image to load", "dyn.importConfirm": "Write {path} into block {i}? Everything on the block is erased.",
+          "dyn.importDone": "Image written to block {i} and verified.",
+          "dyn.clonePrompt": "Copy block {i} to which block?", "dyn.cloneConfirm": "Copy block {from} onto block {to}? Everything on block {to} is erased.",
+          "dyn.cloneDone": "Block {from} copied to block {to} and verified.",
+          "err.verify": "Verification failed — what was read back differs from what was written (byte {at}). The USB stick may be failing.",
+          "err.badImage": "That file is not a 1.44 MB floppy image (1,474,560 bytes).", "err.sameBlock": "Source and target are the same block.",
           "dyn.bootableConfirm": "Make block {i} a FreeDOS boot floppy? Everything on it is erased.",
           "dyn.bootLabelPrompt": "Volume label:", "dyn.bootableDone": "Block {i} is now FreeDOS-bootable.",
           "pv.saveAs": "Save as…", "pv.close": "Close", "col.name": "Name", "col.bytes": "Bytes",
@@ -825,6 +838,14 @@
           "ctx.export": "Dışa aktar", "ctx.delete": "Sil", "bctx.rename": "Bloğu yeniden adlandır…", "bctx.format": "Bloğu formatla…",
           "bctx.bootable": "Bootable yap (FreeDOS)…", "bctx.formatRange": "Aralığı formatla…",
           "dyn.formatRangePrompt": "Blok {i}'den başlayarak kaç blok formatlansın?", "dyn.formatRangeConfirm": "Blok {from}–{to} boş 1.44M disket olarak formatlansın mı? Üzerlerindeki her şey silinir.", "dyn.rangeDone": "Blok {from}–{to} formatlandı.",
+          "bctx.export": ".img olarak kaydet…", "bctx.import": "Bloğa .img yükle…", "bctx.clone": "Başka bloğa kopyala…",
+          "opt.verify": "Yazdıktan sonra doğrula", "dyn.verifying": "Doğrulanıyor",
+          "dyn.importTitle": "Yüklenecek disket imajını seçin", "dyn.importConfirm": "{path} blok {i}'ye yazılsın mı? Bloktaki her şey silinir.",
+          "dyn.importDone": "İmaj blok {i}'ye yazıldı ve doğrulandı.",
+          "dyn.clonePrompt": "Blok {i} hangi bloğa kopyalansın?", "dyn.cloneConfirm": "Blok {from}, blok {to} üzerine kopyalansın mı? Blok {to} üzerindeki her şey silinir.",
+          "dyn.cloneDone": "Blok {from}, blok {to}'ya kopyalandı ve doğrulandı.",
+          "err.verify": "Doğrulama başarısız — geri okunan veri yazılandan farklı ({at}. bayt). USB bellek arızalanıyor olabilir.",
+          "err.badImage": "Bu dosya 1.44 MB disket imajı değil (1.474.560 bayt).", "err.sameBlock": "Kaynak ve hedef aynı blok.",
           "dyn.bootableConfirm": "Blok {i} FreeDOS açılış disketi yapılsın mı? Üzerindeki her şey silinir.",
           "dyn.bootLabelPrompt": "Birim etiketi:", "dyn.bootableDone": "Blok {i} artık FreeDOS ile açılabilir.",
           "pv.saveAs": "Farklı kaydet…", "pv.close": "Kapat", "col.name": "Ad", "col.bytes": "Bayt",
@@ -885,6 +906,9 @@
         [/already exists|os error (80|183)\b|alreadyexists/i, "err.exists"],
         [/short (read|write)|read failed|write failed/i, "err.io"],
         [/invalid file name/i, "err.badName"],
+        [/verification failed at byte (\d+)/i, "err.verify", (m) => ({ at: m[1] })],
+        [/needs a 1\.44 MB floppy image/i, "err.badImage"],
+        [/source and target block are the same/i, "err.sameBlock"],
       ];
       function tErr(e) {
         const msg = String(e && e.message ? e.message : e);
@@ -1018,7 +1042,7 @@
         if (!confirm(t("dyn.formatConfirm", { model: d ? d.model : "the drive", banks, size }))) return;
         setStatus($("fmtStatus"), t("dyn.formatting", { banks }));
         try {
-          const msg = await invoke("format_usb_device", { index, size, banks, labelPrefix, labelStart });
+          const msg = await invoke("format_usb_device", { index, size, banks, labelPrefix, labelStart, verify: $("fmtVerify").checked });
           setStatus($("fmtStatus"), t("dyn.wroteSafe", { msg }), "ok");
         } catch (e) { setStatus($("fmtStatus"), tErr(e), "err"); }
       }
@@ -1381,6 +1405,43 @@
             if (idx === selectedBlock) { currentPath = ""; browse(""); }
             setStatus($("readStatus"), t("dyn.bootableDone", { i: idx }), "ok");
           } catch (err) { setStatus($("readStatus"), tErr(err), "err"); }
+        } else if (act === "export") {
+          const name = "BLOCK" + String(idx).padStart(3, "0") + ".img";
+          let dest = "";
+          if (dialog && dialog.save) {
+            dest = await dialog.save({ defaultPath: name, filters: [{ name: "Floppy image", extensions: ["img", "ima", "vfd"] }] });
+            if (!dest) return;
+          } else { setStatus($("readStatus"), t("dyn.useDragDrop"), "err"); return; }
+          setStatus($("readStatus"), t("dyn.working"));
+          try {
+            await invoke("export_bank", { driveIndex, index: idx, dest });
+            setStatus($("readStatus"), t("dyn.saved1", { dest }), "ok");
+          } catch (err) { setStatus($("readStatus"), tErr(err), "err"); }
+        } else if (act === "import") {
+          if (!dialog || !dialog.open) return;
+          const path = await dialog.open({ multiple: false, title: t("dyn.importTitle"), filters: [{ name: "Floppy image", extensions: ["img", "ima", "vfd", "dsk", "bin"] }] });
+          if (!path) return;
+          if (!confirm(t("dyn.importConfirm", { i: idx, path }))) return;
+          setStatus($("readStatus"), t("dyn.working"));
+          try {
+            await invoke("import_bank", { driveIndex, index: idx, path });
+            const v = await invoke("browse_bank", { driveIndex, index: idx, path: "" });
+            blockLiLabel(idx, v.label, v.formatted);
+            if (idx === selectedBlock) renderDir(v);
+            setStatus($("readStatus"), t("dyn.importDone", { i: idx }), "ok");
+          } catch (err) { setStatus($("readStatus"), tErr(err), "err"); }
+        } else if (act === "clone") {
+          const dst = parseInt(prompt(t("dyn.clonePrompt", { i: idx }), String(idx + 1)), 10);
+          if (isNaN(dst) || dst < 0) return;
+          if (!confirm(t("dyn.cloneConfirm", { from: idx, to: dst }))) return;
+          setStatus($("readStatus"), t("dyn.working"));
+          try {
+            await invoke("clone_bank", { driveIndex, src: idx, dst });
+            const v = await invoke("browse_bank", { driveIndex, index: dst, path: "" });
+            blockLiLabel(dst, v.label, v.formatted);
+            if (dst === selectedBlock) renderDir(v);
+            setStatus($("readStatus"), t("dyn.cloneDone", { from: idx, to: dst }), "ok");
+          } catch (err) { setStatus($("readStatus"), tErr(err), "err"); }
         } else if (act === "formatrange") {
           const n = parseInt(prompt(t("dyn.formatRangePrompt", { i: idx }), "10"), 10);
           if (!n || n < 1) return;
@@ -1488,7 +1549,7 @@
           bar.hidden = false;
           const pct = Math.min(100, Math.round((p.done / p.total) * 100));
           $("progressFill").style.width = pct + "%";
-          $("progressPct").textContent = pct + "%";
+          $("progressPct").textContent = (p.phase === "verify" ? t("dyn.verifying") + " " : "") + pct + "%";
         });
       }
       if (evt && evt.listen) {
@@ -1547,7 +1608,7 @@
         if (!confirm(t("dyn.writeConfirm", { model: d ? d.model : "the drive", path: imagePath }))) return;
         setStatus($("writeStatus"), t("dyn.writingDrive"));
         try {
-          const msg = await invoke("write_usb", { imagePath, index });
+          const msg = await invoke("write_usb", { imagePath, index, verify: $("writeVerify").checked });
           setStatus($("writeStatus"), t("dyn.wroteSafe", { msg }), "ok");
         } catch (e) { setStatus($("writeStatus"), tErr(e), "err"); }
       }

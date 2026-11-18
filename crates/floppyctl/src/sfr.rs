@@ -28,6 +28,19 @@ pub fn bank_offset(index: u32) -> usize {
     index as usize * BANK_STRIDE
 }
 
+/// Check an image file before writing it into one bank. Accepts a 1.44 MB floppy
+/// image, or a raw 1.5 MiB bank dump (its padding is dropped).
+pub fn normalize_bank_image(data: &[u8]) -> Result<&[u8]> {
+    match data.len() {
+        FLOPPY_IMAGE_BYTES => Ok(data),
+        // A raw dump of a whole bank: keep the floppy, drop the zero padding.
+        BANK_STRIDE => Ok(&data[..FLOPPY_IMAGE_BYTES]),
+        n => bail!(
+            "image is {n} bytes; a block needs a 1.44 MB floppy image ({FLOPPY_IMAGE_BYTES} bytes)"
+        ),
+    }
+}
+
 /// Borrow the FAT12 image of bank `index` from a full raw USB image.
 pub fn extract_bank(raw: &[u8], index: u32) -> Result<&[u8]> {
     let off = bank_offset(index);
