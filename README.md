@@ -21,7 +21,16 @@ against the independent [`fatfs`](https://crates.io/crates/fatfs) crate.
 ### Format
 - Split a USB stick into **N** evenly‑sized floppy banks (1.44 MB / 1.2 MB / 720 KB, FAT12).
 - Write directly to the device, or build a raw `usb.img` to flash with Rufus / `dd`.
-- Per‑block quick‑format and volume‑label editing.
+- Per‑block quick‑format and volume‑label editing; **format a range** of blocks at once.
+- **Make a block bootable** with FreeDOS (kernel + `COMMAND.COM`).
+- Every write is **read back and verified** (optional for whole‑USB writes), with a live
+  progress bar.
+
+### Blocks
+- **Save a block as `.img`** / **load a `.img` into a block** (1.44 MB images, or a padded
+  1.5 MiB bank).
+- **Copy a block** onto another block.
+- **Search** file and folder names across every block on the stick.
 
 ### Contents — a real file explorer
 - Two‑pane layout: the blocks on the left, the selected floppy's files on the right.
@@ -34,6 +43,11 @@ against the independent [`fatfs`](https://crates.io/crates/fatfs) crate.
 
 ### Advanced
 - Build a multi‑bank USB image file, write an existing image, or format a single floppy image.
+- **Back up** the stick (or its first N banks) to a raw `.img` and restore it later.
+
+### Convenience
+- USB sticks are **detected automatically** when plugged in or removed.
+- Remembers the last device, format settings and tab. English / Turkish UI.
 
 ### CLI (`floppyctl`)
 ```sh
@@ -61,13 +75,28 @@ See [`TECHNICAL_REPORT.md`](TECHNICAL_REPORT.md) for the full technical report (
 
 ---
 
+## Download
+
+Installers are published on the [Releases](https://github.com/akbulut97/floppy-workbench/releases)
+page: Windows (`.exe` setup / `.msi`), Linux (`.AppImage` / `.deb`) and macOS (`.dmg`).
+They are **not code‑signed**, so Windows SmartScreen and macOS Gatekeeper will warn on first
+launch (macOS: right‑click → Open).
+
 ## Requirements
 
-- **Windows** (the GUI and direct device I/O are Windows‑only for now).
-- **Administrator** privileges to read/write the raw USB device.
-- **WebView2** runtime (preinstalled on Windows 11).
+- **Windows 10/11**, **Linux** or **macOS**.
+- Raw access to the USB device:
+  - Windows: **Administrator** (the release build asks for elevation automatically).
+  - Linux: run as **root** (e.g. `sudo floppy-workbench`) or add yourself to the `disk` group.
+    Mounted partitions of the stick are unmounted before writing.
+  - macOS: run with `sudo`; the stick is unmounted via `diskutil` before writing.
+- **WebView2** on Windows (preinstalled on Windows 11); WebKitGTK 4.1 on Linux.
 - To build: a recent **Rust** toolchain and **Node** (only the Tauri CLI prerequisites; the
-  frontend itself is dependency‑free vanilla HTML).
+  frontend itself is dependency‑free vanilla HTML). On Linux also
+  `libwebkit2gtk-4.1-dev libappindicator3-dev librsvg2-dev patchelf`.
+
+> Real‑hardware testing has been done on Windows. The Linux and macOS device paths are
+> built and unit‑tested in CI but are less exercised — try a spare stick first.
 
 ## Build & run
 
@@ -81,7 +110,15 @@ cargo run -p floppyctl -- info disk.img
 # GUI (run the built exe as Administrator for device access)
 cargo build --release -p floppy-gui
 # → target/release/floppy-gui.exe   (single portable file, ~6 MB)
+
+# installers (NSIS/MSI on Windows, AppImage/deb on Linux, dmg on macOS)
+cd crates/floppy-gui && npx --yes @tauri-apps/cli@2.12.6 build
+# → target/release/bundle/
 ```
+
+Pushing a `v*` tag runs the release workflow, which builds installers for all three
+platforms and attaches them to a draft GitHub release. CI runs `cargo fmt --check`,
+`clippy -D warnings` and the tests on Windows, Linux and macOS.
 
 ---
 
@@ -104,9 +141,9 @@ spare USB stick first**, and double‑check the selected drive.
 ## Status
 
 The FAT12 core and device layout are covered by tests and validated against an independent
-FAT implementation. Removable‑drive detection has been verified against real hardware;
-**the raw write/read path has not yet been verified end‑to‑end on a physical device** — treat
-the destructive operations as experimental until you confirm them with your own emulator.
+FAT implementation. The full workflow (format, write, read back) has been tested on Windows
+with a real SFR1M44‑U100 emulator, and every write is verified by reading it back. Linux and
+macOS support is newer — confirm it on a spare stick with your own emulator before relying on it.
 
 ## License
 

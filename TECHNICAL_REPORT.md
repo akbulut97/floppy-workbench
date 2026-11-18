@@ -213,29 +213,35 @@ Suggested list-view columns (compatible with the reference):
 
 ## 6. Functional Requirements (summary list)
 
+Status as of the current Floppy Workbench release:
+
 **Device**
-- [ ] Detect and select the USB floppy emulator device
-- [ ] Count/list blocks (1–100), read metadata
-- [ ] 4 view modes + refresh
+- [x] Detect and select the USB floppy emulator device (removable drives only; re-scans automatically on plug/unplug)
+- [x] Count/list blocks (1–100), read metadata (label, used/free space)
+- [ ] 4 view modes + refresh: refresh is done; a single list view replaces the 4 view modes
+- [x] Search file names across all blocks (extra)
 
 **Format**
-- [ ] Split the USB into N blocks (full format)
-- [ ] Single-block format (720K / 1.2M / 1.44M, FAT12)
-- [ ] Quick format
-- [ ] Bulk (multi-select) format
-- [ ] Create bootable DOS floppies (FreeDOS recommended)
-- [ ] Confirmation dialog for destructive operations
-- [ ] Remember the last format setting
+- [x] Split the USB into N blocks (full format)
+- [x] Single-block format (720K / 1.2M / 1.44M, FAT12)
+- [x] Quick format
+- [x] Bulk format: done as **format a range** of blocks, not as free multi-select
+- [x] Create bootable DOS floppies (FreeDOS)
+- [x] Confirmation dialog for destructive operations
+- [x] Remember the last format setting (plus device, tab and language)
 
 **Data**
-- [ ] Upload files to a block / download files from a block
-- [ ] Write a `.img` to a block / save a block as `.img`
-- [ ] Bulk write/save
-- [ ] Back up / restore the whole USB
+- [x] Upload files to a block / download files from a block (full file explorer: folders, cut/copy/paste, rename, preview)
+- [x] Write a `.img` to a block / save a block as `.img`
+- [x] Copy a block onto another block (extra)
+- [ ] Bulk write/save of several separate `.img` files: partly covered by range backup/restore
+- [x] Back up / restore the whole USB (or its first N banks)
+- [x] Read-back verification after every write (extra)
 
 **System**
-- [ ] Admin elevation (if raw access is needed)
-- [ ] Settings persistence (registry or config file)
+- [x] Admin elevation: the Windows release build embeds a `requireAdministrator` manifest; Linux/macOS run as root
+- [x] Settings persistence (stored by the app, no registry)
+- [x] Windows, Linux and macOS builds; installers via the release workflow (unsigned)
 
 ---
 

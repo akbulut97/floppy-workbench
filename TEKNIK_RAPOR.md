@@ -213,29 +213,35 @@ Sektör 33..2879     : Veri alanı (cluster 2'den başlar)
 
 ## 6. Fonksiyonel Gereksinimler (özet liste)
 
+Güncel Floppy Workbench sürümü itibarıyla durum:
+
 **Aygıt**
-- [ ] USB disket emülatör aygıtını algıla ve seç
-- [ ] Blokları say/listele (1–100), meta veriyi oku
-- [ ] 4 görünüm modu + yenileme
+- [x] USB disket emülatör aygıtını algıla ve seç (yalnızca çıkarılabilir sürücüler; takma/çıkarmada otomatik yeniden tarama)
+- [x] Blokları say/listele (1–100), meta veriyi oku (etiket, dolu/boş alan)
+- [ ] 4 görünüm modu + yenileme: yenileme yapıldı; 4 görünüm modu yerine tek liste görünümü var
+- [x] Tüm bloklarda dosya adı arama (ek)
 
 **Format**
-- [ ] USB'yi N bloğa böl (toplam format)
-- [ ] Tek blok format (720K / 1.2M / 1.44M, FAT12)
-- [ ] Quick format
-- [ ] Toplu (çoklu seçim) format
-- [ ] Bootable DOS disketi oluşturma (FreeDOS önerilir)
-- [ ] Yıkıcı işlemlerde onay diyaloğu
-- [ ] Son format ayarını hatırlama
+- [x] USB'yi N bloğa böl (toplam format)
+- [x] Tek blok format (720K / 1.2M / 1.44M, FAT12)
+- [x] Quick format
+- [x] Toplu format: serbest çoklu seçim yerine blok **aralığı formatlama** olarak yapıldı
+- [x] Bootable DOS disketi oluşturma (FreeDOS)
+- [x] Yıkıcı işlemlerde onay diyaloğu
+- [x] Son format ayarını hatırlama (ayrıca cihaz, sekme ve dil)
 
 **Veri**
-- [ ] Bloğa dosya yükle / bloktan dosya indir
-- [ ] Bloğa `.img` yaz / bloğu `.img` olarak kaydet
-- [ ] Toplu yaz/kaydet
-- [ ] Tüm USB'yi yedekle / geri yükle
+- [x] Bloğa dosya yükle / bloktan dosya indir (tam dosya gezgini: klasörler, kes/kopyala/yapıştır, yeniden adlandır, önizleme)
+- [x] Bloğa `.img` yaz / bloğu `.img` olarak kaydet
+- [x] Bir bloğu başka bloğa kopyala (ek)
+- [ ] Birden çok ayrı `.img` dosyasını toplu yaz/kaydet: kısmen aralık yedekleme/geri yükleme ile karşılanıyor
+- [x] Tüm USB'yi (veya ilk N bankayı) yedekle / geri yükle
+- [x] Her yazmadan sonra geri okuyarak doğrulama (ek)
 
 **Sistem**
-- [ ] Admin yükseltme (ham erişim gerekiyorsa)
-- [ ] Ayar kalıcılığı (registry veya config dosyası)
+- [x] Admin yükseltme: Windows release derlemesi `requireAdministrator` manifesti gömer; Linux/macOS root ile çalışır
+- [x] Ayar kalıcılığı (uygulama içinde saklanır, registry kullanılmaz)
+- [x] Windows, Linux ve macOS derlemeleri; release iş akışıyla kurulum dosyaları (imzasız)
 
 ---
 

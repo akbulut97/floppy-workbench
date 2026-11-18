@@ -20,7 +20,16 @@ formatlar; saklanan disketleri bir dosya‑gezgini arayüzüyle gözatıp düzen
 ### Format
 - USB'yi **N** adet eşit boyutlu floppy bankasına böl (1.44 MB / 1.2 MB / 720 KB, FAT12).
 - Doğrudan cihaza yaz ya da Rufus / `dd` ile yazmak için ham bir `usb.img` üret.
-- Blok başına hızlı format ve disket etiketi düzenleme.
+- Blok başına hızlı format ve disket etiketi düzenleme; bir blok **aralığını tek seferde formatla**.
+- Bir bloğu FreeDOS ile **bootable yap** (kernel + `COMMAND.COM`).
+- Her yazma **geri okunup doğrulanır** (tüm USB yazımlarında isteğe bağlı), canlı ilerleme
+  çubuğuyla.
+
+### Bloklar
+- **Bloğu `.img` olarak kaydet** / **bloğa `.img` yükle** (1.44 MB imajlar veya dolgulu
+  1.5 MiB banka).
+- Bir bloğu başka bir bloğa **kopyala**.
+- USB'deki tüm bloklarda dosya ve klasör adlarında **ara**.
 
 ### İçerik (Contents) — gerçek bir dosya gezgini
 - İki panel: solda bloklar, sağda seçili disketin dosyaları.
@@ -33,6 +42,11 @@ formatlar; saklanan disketleri bir dosya‑gezgini arayüzüyle gözatıp düzen
 
 ### Gelişmiş (Advanced)
 - Çok bankalı USB imajı üret, mevcut imajı yaz veya tek bir floppy imajı formatla.
+- USB'yi (veya ilk N bankasını) ham bir `.img` dosyasına **yedekle**, sonra geri yükle.
+
+### Kolaylıklar
+- USB bellek takıldığında / çıkarıldığında **otomatik algılanır**.
+- Son cihazı, format ayarlarını ve sekmeyi hatırlar. İngilizce / Türkçe arayüz.
 
 ### CLI (`floppyctl`)
 ```sh
@@ -59,13 +73,28 @@ Tam teknik rapor için: [`TEKNIK_RAPOR.md`](TEKNIK_RAPOR.md) ([İngilizce](TECHN
 
 ---
 
+## İndirme
+
+Kurulum dosyaları [Releases](https://github.com/akbulut97/floppy-workbench/releases)
+sayfasında yayınlanır: Windows (`.exe` kurulum / `.msi`), Linux (`.AppImage` / `.deb`) ve
+macOS (`.dmg`). **Kod imzalı değildir**; bu yüzden Windows SmartScreen ve macOS Gatekeeper ilk
+açılışta uyarı verir (macOS: sağ tık → Aç).
+
 ## Gereksinimler
 
-- **Windows** (GUI ve doğrudan cihaz G/Ç şimdilik yalnızca Windows).
-- Ham USB cihazını okumak/yazmak için **Yönetici** hakları.
-- **WebView2** çalışma zamanı (Windows 11'de hazır gelir).
+- **Windows 10/11**, **Linux** veya **macOS**.
+- USB cihazına ham erişim:
+  - Windows: **Yönetici** (release derlemesi yükseltmeyi otomatik ister).
+  - Linux: **root** olarak çalıştırın (ör. `sudo floppy-workbench`) ya da kullanıcınızı `disk`
+    grubuna ekleyin. Yazmadan önce USB'nin bağlı bölümleri ayrılır (unmount).
+  - macOS: `sudo` ile çalıştırın; yazmadan önce bellek `diskutil` ile ayrılır.
+- Windows'ta **WebView2** (Windows 11'de hazır gelir); Linux'ta WebKitGTK 4.1.
 - Derlemek için: güncel bir **Rust** zinciri ve **Node** (yalnızca Tauri CLI önkoşulları;
-  arayüzün kendisi bağımlılıksız, düz HTML).
+  arayüzün kendisi bağımlılıksız, düz HTML). Linux'ta ayrıca
+  `libwebkit2gtk-4.1-dev libappindicator3-dev librsvg2-dev patchelf`.
+
+> Gerçek donanım testleri Windows'ta yapıldı. Linux ve macOS cihaz yolları CI'da derlenip
+> birim testlerinden geçiyor ama daha az denendi — önce yedek bir USB ile deneyin.
 
 ## Derleme ve çalıştırma
 
@@ -79,7 +108,15 @@ cargo run -p floppyctl -- info disk.img
 # GUI (cihaz erişimi için derlenen exe'yi Yönetici olarak çalıştır)
 cargo build --release -p floppy-gui
 # → target/release/floppy-gui.exe   (tek taşınabilir dosya, ~6 MB)
+
+# kurulum dosyaları (Windows'ta NSIS/MSI, Linux'ta AppImage/deb, macOS'ta dmg)
+cd crates/floppy-gui && npx --yes @tauri-apps/cli@2.12.6 build
+# → target/release/bundle/
 ```
+
+Bir `v*` etiketi push edildiğinde release iş akışı üç platform için kurulum dosyalarını
+derler ve bunları taslak (draft) bir GitHub sürümüne ekler. CI; Windows, Linux ve macOS'ta
+`cargo fmt --check`, `clippy -D warnings` ve testleri çalıştırır.
 
 ---
 
@@ -102,9 +139,9 @@ USB ile deneyin** ve seçili sürücüyü iki kez kontrol edin.
 ## Durum
 
 FAT12 çekirdeği ve cihaz yerleşimi testlerle kaplıdır ve bağımsız bir FAT uygulamasıyla
-doğrulanır. Çıkarılabilir sürücü algılama gerçek donanımla doğrulandı; ancak
-**ham yazma/okuma yolu henüz fiziksel bir cihazda uçtan uca doğrulanmadı** — kendi
-emülatörünüzle teyit edene kadar yıkıcı işlemleri deneysel kabul edin.
+doğrulanır. Tüm akış (format, yazma, geri okuma) Windows'ta gerçek bir SFR1M44‑U100
+emülatörüyle test edildi ve her yazma geri okunarak doğrulanır. Linux ve macOS desteği daha
+yeni — güvenmeden önce kendi emülatörünüz ve yedek bir USB ile teyit edin.
 
 ## Lisans
 
