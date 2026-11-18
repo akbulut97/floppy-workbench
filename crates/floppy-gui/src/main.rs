@@ -388,8 +388,14 @@ fn export_file(
     let data = floppyctl::fsops::read_file_at(&img, &join_path(&path, &name))
         .map_err(|e| e.to_string())?;
     let dest = if dest.trim().is_empty() {
-        let home = std::env::var("USERPROFILE").map_err(|_| "USERPROFILE not set".to_string())?;
-        format!("{home}\\Downloads\\{name}")
+        let home = std::env::var("USERPROFILE")
+            .or_else(|_| std::env::var("HOME"))
+            .map_err(|_| "home directory not found".to_string())?;
+        std::path::Path::new(&home)
+            .join("Downloads")
+            .join(&name)
+            .to_string_lossy()
+            .into_owned()
     } else {
         dest
     };

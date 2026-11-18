@@ -328,6 +328,7 @@
       .crumbs a:hover { text-decoration: underline; }
       .crumbs .cur { color: var(--text); font-weight: 600; }
       .crumbs .sly { color: var(--muted); margin: 0 1px; }
+      .rename-input { font: inherit; padding: 2px 6px; min-width: 0; width: 70%; border: 1px solid var(--amber); border-radius: 5px; background: var(--ink); color: var(--text); }
 
       .modal {
         position: fixed; inset: 0; z-index: 80;
@@ -734,6 +735,13 @@
           "adv.backupTitle": "Back up the USB to a file", "adv.backupBanks": "Banks to back up", "adv.backupBtn": "Back up…",
           "adv.backupNote": "Saves the chosen number of 1.5 MiB banks from the top-bar device into a raw .img you can restore above.",
           "dyn.backingUp": "Backing up {n} banks…", "dyn.backedUp": "Saved {msg}",
+          "err.access": "Access denied — run Floppy Workbench as Administrator.", "err.noDrive": "The selected USB drive is no longer connected. Rescan and pick it again.",
+          "err.notFormatted": "Block {i} isn’t formatted. Format it first (right-click the block).", "err.notFormattedAny": "That block isn’t formatted. Format it first.",
+          "err.full": "“{name}” doesn’t fit — the floppy is full (1.44 MB).", "err.notRemovable": "Refused: that drive is not a removable USB drive.",
+          "err.tooLarge": "The image is larger than the selected drive.", "err.safety": "Safety check failed — the drive changed. Rescan and try again.",
+          "err.notFat12": "This is not a valid FAT12 floppy image.", "err.range": "That block number is outside the image.",
+          "err.notFound": "File or folder not found.", "err.exists": "An item with that name already exists.",
+          "err.io": "Reading or writing the USB failed. Check the connection and try again.", "err.badName": "Invalid file name.",
           "ctx.open": "Open", "ctx.cut": "Cut", "ctx.copy": "Copy", "ctx.paste": "Paste", "ctx.rename": "Rename",
           "ctx.export": "Export", "ctx.delete": "Delete", "bctx.rename": "Rename block…", "bctx.format": "Format block…",
           "bctx.bootable": "Make bootable (FreeDOS)…", "bctx.formatRange": "Format range…",
@@ -806,6 +814,13 @@
           "adv.backupTitle": "USB'yi dosyaya yedekle", "adv.backupBanks": "Yedeklenecek banka", "adv.backupBtn": "Yedekle…",
           "adv.backupNote": "Üst çubuktaki cihazdan seçtiğiniz sayıda 1.5 MiB bankayı, yukarıdan geri yükleyebileceğiniz ham bir .img dosyasına kaydeder.",
           "dyn.backingUp": "{n} banka yedekleniyor…", "dyn.backedUp": "Kaydedildi: {msg}",
+          "err.access": "Erişim reddedildi — Floppy Workbench’i yönetici olarak çalıştırın.", "err.noDrive": "Seçili USB sürücü artık bağlı değil. Yeniden tarayıp tekrar seçin.",
+          "err.notFormatted": "Blok {i} formatlı değil. Önce formatlayın (bloğa sağ tıklayın).", "err.notFormattedAny": "Bu blok formatlı değil. Önce formatlayın.",
+          "err.full": "“{name}” sığmıyor — disket dolu (1.44 MB).", "err.notRemovable": "Reddedildi: bu sürücü çıkarılabilir bir USB sürücü değil.",
+          "err.tooLarge": "İmaj, seçili sürücüden büyük.", "err.safety": "Güvenlik kontrolü başarısız — sürücü değişti. Yeniden tarayıp tekrar deneyin.",
+          "err.notFat12": "Bu geçerli bir FAT12 disket imajı değil.", "err.range": "Bu blok numarası imajın dışında.",
+          "err.notFound": "Dosya veya klasör bulunamadı.", "err.exists": "Bu adda bir öğe zaten var.",
+          "err.io": "USB okuma/yazma başarısız. Bağlantıyı kontrol edip tekrar deneyin.", "err.badName": "Geçersiz dosya adı.",
           "ctx.open": "Aç", "ctx.cut": "Kes", "ctx.copy": "Kopyala", "ctx.paste": "Yapıştır", "ctx.rename": "Yeniden adlandır",
           "ctx.export": "Dışa aktar", "ctx.delete": "Sil", "bctx.rename": "Bloğu yeniden adlandır…", "bctx.format": "Bloğu formatla…",
           "bctx.bootable": "Bootable yap (FreeDOS)…", "bctx.formatRange": "Aralığı formatla…",
@@ -852,6 +867,32 @@
         let s = d[key] != null ? d[key] : (I18N.en[key] != null ? I18N.en[key] : key);
         if (p) for (const k in p) s = s.split("{" + k + "}").join(p[k]);
         return s;
+      }
+      // Backend errors arrive as English text; map the known ones to friendly,
+      // translated messages. Unknown errors are shown as-is.
+      const ERR_RULES = [
+        [/os error 5\b|access is denied|erişim engellendi/i, "err.access"],
+        [/no removable drive with index/i, "err.noDrive"],
+        [/block (\d+) isn't formatted/i, "err.notFormatted", (m) => ({ i: m[1] })],
+        [/block isn't formatted/i, "err.notFormattedAny"],
+        [/^(.+?): .*\(floppy full\?\)/i, "err.full", (m) => ({ name: m[1] })],
+        [/not removable/i, "err.notRemovable"],
+        [/larger than the drive/i, "err.tooLarge"],
+        [/safety check failed/i, "err.safety"],
+        [/not a FAT12 image|invalid boot sector/i, "err.notFat12"],
+        [/out of range|beyond the image/i, "err.range"],
+        [/os error 2\b|no such file|cannot find the (file|path)|notfound/i, "err.notFound"],
+        [/already exists|os error (80|183)\b|alreadyexists/i, "err.exists"],
+        [/short (read|write)|read failed|write failed/i, "err.io"],
+        [/invalid file name/i, "err.badName"],
+      ];
+      function tErr(e) {
+        const msg = String(e && e.message ? e.message : e);
+        for (const [re, key, fn] of ERR_RULES) {
+          const m = msg.match(re);
+          if (m) return t(key, fn ? fn(m) : undefined);
+        }
+        return msg;
       }
       function applyI18n() {
         document.querySelectorAll("[data-i18n]").forEach((el) => { el.textContent = t(el.getAttribute("data-i18n")); });
@@ -979,7 +1020,7 @@
         try {
           const msg = await invoke("format_usb_device", { index, size, banks, labelPrefix, labelStart });
           setStatus($("fmtStatus"), t("dyn.wroteSafe", { msg }), "ok");
-        } catch (e) { setStatus($("fmtStatus"), "" + e, "err"); }
+        } catch (e) { setStatus($("fmtStatus"), tErr(e), "err"); }
       }
       $("fmtBegin").addEventListener("click", beginFormat);
 
@@ -1043,7 +1084,9 @@
         $("paneMeta").textContent = `“${v.label || t("dyn.unlabeled")}” · ${kb(v.used_bytes)} · ${pct}%`;
       }
 
+      let lastView = null;
       function renderDir(v) {
+        lastView = v;
         currentPath = v.path;
         currentEntries = v.entries || [];
         selectedNames.clear();
@@ -1092,13 +1135,13 @@
           const v = await invoke("browse_bank", { driveIndex, index: selectedBlock, path });
           renderDir(v);
           setStatus($("readStatus"), "", "");
-        } catch (e) { setStatus($("readStatus"), "" + e, "err"); }
+        } catch (e) { setStatus($("readStatus"), tErr(e), "err"); }
       }
 
       async function runOp(fn, okMsg) {
         setStatus($("readStatus"), t("dyn.working"));
         try { const v = await fn(); renderDir(v); setStatus($("readStatus"), okMsg, "ok"); }
-        catch (e) { setStatus($("readStatus"), "" + e, "err"); }
+        catch (e) { setStatus($("readStatus"), tErr(e), "err"); }
       }
 
       async function newFolder() {
@@ -1107,12 +1150,38 @@
         if (!name) return;
         runOp(() => invoke("mkdir_in_bank", { driveIndex: selectedDrive(), index: selectedBlock, path: currentPath, name: name.toUpperCase() }), t("dyn.created", { name }));
       }
-      async function renameSel() {
+      // Inline rename: the name cell turns into an input. Enter/blur saves, Esc cancels.
+      function renameSel() {
         if (selectedNames.size !== 1) return;
         const from = [...selectedNames][0];
-        const to = prompt(t("dyn.renamePrompt"), from);
-        if (!to || to === from) return;
-        runOp(() => invoke("rename_in_dir", { driveIndex: selectedDrive(), index: selectedBlock, path: currentPath, from, to: to.toUpperCase() }), t("dyn.renamed", { name: to }));
+        const tr = [...document.querySelectorAll("#readResult tr[data-name]")].find((r) => r.dataset.name === from);
+        if (!tr) return;
+        const isDir = tr.dataset.dir === "true";
+        const td = tr.cells[0];
+        td.innerHTML = `${isDir ? "📁" : "📄"}&nbsp; `;
+        const inp = document.createElement("input");
+        inp.className = "rename-input";
+        inp.value = from;
+        inp.maxLength = 64;
+        td.appendChild(inp);
+        inp.focus();
+        const dot = from.lastIndexOf(".");
+        inp.setSelectionRange(0, !isDir && dot > 0 ? dot : from.length);
+        let done = false;
+        const finish = (commit) => {
+          if (done) return;
+          done = true;
+          const to = inp.value.trim().toUpperCase();
+          if (!commit || !to || to === from) { if (lastView) renderDir(lastView); return; }
+          runOp(() => invoke("rename_in_dir", { driveIndex: selectedDrive(), index: selectedBlock, path: currentPath, from, to }), t("dyn.renamed", { name: to }));
+        };
+        inp.addEventListener("keydown", (e) => {
+          e.stopPropagation();
+          if (e.key === "Enter") finish(true);
+          else if (e.key === "Escape") finish(false);
+        });
+        inp.addEventListener("blur", () => finish(true));
+        ["click", "dblclick", "contextmenu"].forEach((ev) => inp.addEventListener(ev, (e) => e.stopPropagation()));
       }
       async function deleteSel() {
         if (!selectedNames.size) return;
@@ -1138,11 +1207,11 @@
           }
           let last = "";
           for (const name of files) {
-            const dest = destDir ? destDir + "\\" + name : "";
+            const sep = destDir.includes("\\") ? "\\" : "/"; const dest = destDir ? destDir + sep + name : "";
             last = await invoke("export_file", { driveIndex: selectedDrive(), index: selectedBlock, path: currentPath, name, dest });
           }
           setStatus($("readStatus"), t("dyn.savedN", { n: files.length, dest: last }), "ok");
-        } catch (e) { setStatus($("readStatus"), "" + e, "err"); }
+        } catch (e) { setStatus($("readStatus"), tErr(e), "err"); }
       }
 
       let pvTarget = null;
@@ -1164,7 +1233,7 @@
           } else {
             $("pvBody").innerHTML = `<div class="binfo">${t("dyn.binary", { size: p.size.toLocaleString() })}</div>`;
           }
-        } catch (e) { $("pvBody").innerHTML = `<div class="binfo">${e}</div>`; }
+        } catch (e) { $("pvBody").innerHTML = `<div class="binfo">${tErr(e)}</div>`; }
       }
       function closePreview() { $("previewModal").hidden = true; $("pvBody").innerHTML = ""; pvTarget = null; }
       $("pvClose").addEventListener("click", closePreview);
@@ -1218,7 +1287,7 @@
           if (c.cut) clip = null;
           setStatus($("readStatus"), t("dyn.pasted", { n: c.names.length }), "ok");
           updateToolbar();
-        } catch (e) { setStatus($("readStatus"), "" + e, "err"); }
+        } catch (e) { setStatus($("readStatus"), tErr(e), "err"); }
       }
 
       $("upBtn").addEventListener("click", () => { if (currentPath) browse(parentOf(currentPath)); });
@@ -1301,7 +1370,7 @@
             blockLiLabel(idx, nl, true);
             if (idx === selectedBlock) browse(currentPath);
             setStatus($("readStatus"), t("dyn.blockLabeled", { i: idx, nl }), "ok");
-          } catch (err) { setStatus($("readStatus"), "" + err, "err"); }
+          } catch (err) { setStatus($("readStatus"), tErr(err), "err"); }
         } else if (act === "bootable") {
           if (!confirm(t("dyn.bootableConfirm", { i: idx }))) return;
           const label = prompt(t("dyn.bootLabelPrompt"), "FREEDOS") || "FREEDOS";
@@ -1311,7 +1380,7 @@
             blockLiLabel(idx, label.toUpperCase(), true);
             if (idx === selectedBlock) { currentPath = ""; browse(""); }
             setStatus($("readStatus"), t("dyn.bootableDone", { i: idx }), "ok");
-          } catch (err) { setStatus($("readStatus"), "" + err, "err"); }
+          } catch (err) { setStatus($("readStatus"), tErr(err), "err"); }
         } else if (act === "formatrange") {
           const n = parseInt(prompt(t("dyn.formatRangePrompt", { i: idx }), "10"), 10);
           if (!n || n < 1) return;
@@ -1323,7 +1392,7 @@
             for (let i = idx; i <= last; i++) blockLiLabel(i, "NO NAME", true);
             if (selectedBlock !== null && selectedBlock >= idx && selectedBlock <= last) { currentPath = ""; browse(""); }
             setStatus($("readStatus"), t("dyn.rangeDone", { from: idx, to: last }), "ok");
-          } catch (err) { setStatus($("readStatus"), "" + err, "err"); }
+          } catch (err) { setStatus($("readStatus"), tErr(err), "err"); }
         } else if (act === "format") {
           if (!confirm(t("dyn.formatBlockConfirm", { i: idx }))) return;
           const label = prompt(t("dyn.newLabelPrompt"), "NO NAME") || "NO NAME";
@@ -1332,7 +1401,7 @@
             blockLiLabel(idx, label.toUpperCase(), true);
             if (idx === selectedBlock) { currentPath = ""; browse(""); }
             setStatus($("readStatus"), t("dyn.blockFormatted", { i: idx }), "ok");
-          } catch (err) { setStatus($("readStatus"), "" + err, "err"); }
+          } catch (err) { setStatus($("readStatus"), tErr(err), "err"); }
         }
       });
       $("ctxMenu").addEventListener("click", (e) => {
@@ -1384,7 +1453,7 @@
             li.addEventListener("contextmenu", (e) => { e.preventDefault(); ctxBlockIndex = idx; openBlockCtx(e.clientX, e.clientY); });
           });
           if (selectedBlock !== null) markSelected(selectedBlock);
-        } catch (e) { list.innerHTML = `<li class="mini-empty">${e}</li>`; }
+        } catch (e) { list.innerHTML = `<li class="mini-empty">${tErr(e)}</li>`; }
       }
       $("scanBtn").addEventListener("click", scanBlocks);
       function maybeAutoScan() {
@@ -1404,7 +1473,7 @@
           renderDir(v);
           setStatus($("readStatus"), t("dyn.added", { n: paths.length }), "ok");
         } catch (e) {
-          setStatus($("readStatus"), "" + e, "err");
+          setStatus($("readStatus"), tErr(e), "err");
         } finally {
           dz.classList.remove("busy", "over");
         }
@@ -1464,7 +1533,7 @@
         try {
           const msg = await invoke("build_sfr_image", { out, banks, bankSpecs: bank_specs });
           setStatus($("sfrStatus"), t("dyn.wrote", { msg }), "ok");
-        } catch (e) { setStatus($("sfrStatus"), "" + e, "err"); }
+        } catch (e) { setStatus($("sfrStatus"), tErr(e), "err"); }
       }
       $("sfrBuild").addEventListener("click", buildSfr);
 
@@ -1480,7 +1549,7 @@
         try {
           const msg = await invoke("write_usb", { imagePath, index });
           setStatus($("writeStatus"), t("dyn.wroteSafe", { msg }), "ok");
-        } catch (e) { setStatus($("writeStatus"), "" + e, "err"); }
+        } catch (e) { setStatus($("writeStatus"), tErr(e), "err"); }
       }
       $("writeBtn").addEventListener("click", writeImage);
 
@@ -1492,7 +1561,7 @@
         try {
           const bytes = await invoke("format_image_file", { path, size, label: $("oneLabel").value });
           setStatus($("oneStatus"), t("dyn.createdFile", { path, size: kb(bytes) }), "ok");
-        } catch (e) { setStatus($("oneStatus"), "" + e, "err"); }
+        } catch (e) { setStatus($("oneStatus"), tErr(e), "err"); }
       }
       $("oneBuild").addEventListener("click", buildOne);
 
@@ -1507,7 +1576,7 @@
         try {
           const msg = await invoke("backup_usb", { driveIndex: index, banks, outPath: out });
           setStatus($("bkStatus"), t("dyn.backedUp", { msg }), "ok");
-        } catch (e) { setStatus($("bkStatus"), "" + e, "err"); }
+        } catch (e) { setStatus($("bkStatus"), tErr(e), "err"); }
       }
       $("bkBtn").addEventListener("click", backupUsb);
 
