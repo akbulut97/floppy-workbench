@@ -8,7 +8,9 @@ use floppyctl::blockset::{BlockSet, Naming};
 fn created_block_file_follows_naming() {
     let dir = tempfile::tempdir().unwrap();
     let set = BlockSet::new(dir.path(), Naming::Gotek);
-    let path = set.create_block(0, FloppyFormat::F1_44M, "DISK0", 0).unwrap();
+    let path = set
+        .create_block(0, FloppyFormat::F1_44M, "DISK0", 0)
+        .unwrap();
     assert_eq!(path.file_name().unwrap(), "DSKA0000.IMG");
     assert!(path.exists());
     assert_eq!(std::fs::metadata(&path).unwrap().len(), 1_474_560);
@@ -26,9 +28,12 @@ fn ipcas_naming_scheme() {
 fn list_returns_blocks_sorted_with_info() {
     let dir = tempfile::tempdir().unwrap();
     let set = BlockSet::new(dir.path(), Naming::Gotek);
-    set.create_block(2, FloppyFormat::F1_44M, "THIRD", 0).unwrap();
-    set.create_block(0, FloppyFormat::F1_44M, "FIRST", 0).unwrap();
-    set.create_block(1, FloppyFormat::F720K, "SECOND", 0).unwrap();
+    set.create_block(2, FloppyFormat::F1_44M, "THIRD", 0)
+        .unwrap();
+    set.create_block(0, FloppyFormat::F1_44M, "FIRST", 0)
+        .unwrap();
+    set.create_block(1, FloppyFormat::F720K, "SECOND", 0)
+        .unwrap();
 
     let blocks = set.list().unwrap();
     assert_eq!(blocks.len(), 3);

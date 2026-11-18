@@ -87,18 +87,34 @@ fn parse_add_spec_rejects_missing_path() {
 #[test]
 fn attach_files_targets_matching_bank() {
     let mut specs = vec![
-        BankSpec { index: 0, format: FloppyFormat::F1_44M, label: "A".into(), files: vec![] },
-        BankSpec { index: 1, format: FloppyFormat::F1_44M, label: "B".into(), files: vec![] },
+        BankSpec {
+            index: 0,
+            format: FloppyFormat::F1_44M,
+            label: "A".into(),
+            files: vec![],
+        },
+        BankSpec {
+            index: 1,
+            format: FloppyFormat::F1_44M,
+            label: "B".into(),
+            files: vec![],
+        },
     ];
     floppyctl::attach_file(&mut specs, 1, "F.TXT".into(), b"data".to_vec()).unwrap();
     assert!(specs[0].files.is_empty());
-    assert_eq!(specs[1].files, vec![("F.TXT".to_string(), b"data".to_vec())]);
+    assert_eq!(
+        specs[1].files,
+        vec![("F.TXT".to_string(), b"data".to_vec())]
+    );
 }
 
 #[test]
 fn attach_files_errors_on_unknown_bank() {
     let mut specs = vec![BankSpec {
-        index: 0, format: FloppyFormat::F1_44M, label: "A".into(), files: vec![],
+        index: 0,
+        format: FloppyFormat::F1_44M,
+        label: "A".into(),
+        files: vec![],
     }];
     assert!(floppyctl::attach_file(&mut specs, 9, "F".into(), vec![]).is_err());
 }

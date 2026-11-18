@@ -125,8 +125,8 @@ fn main() -> Result<()> {
             let format = parse_format(&size)?;
             let mut files = Vec::new();
             for path in &add {
-                let data = std::fs::read(path)
-                    .with_context(|| format!("reading {}", path.display()))?;
+                let data =
+                    std::fs::read(path).with_context(|| format!("reading {}", path.display()))?;
                 let name = path
                     .file_name()
                     .and_then(|n| n.to_str())
@@ -135,8 +135,7 @@ fn main() -> Result<()> {
                 files.push((name, data));
             }
             let img = build_image(format, &label, serial, &files)?;
-            std::fs::write(&out, &img)
-                .with_context(|| format!("writing {}", out.display()))?;
+            std::fs::write(&out, &img).with_context(|| format!("writing {}", out.display()))?;
             println!(
                 "Wrote {} ({} bytes, {}, label '{}', {} file(s))",
                 out.display(),
@@ -147,8 +146,8 @@ fn main() -> Result<()> {
             );
         }
         Command::Info { image } => {
-            let data = std::fs::read(&image)
-                .with_context(|| format!("reading {}", image.display()))?;
+            let data =
+                std::fs::read(&image).with_context(|| format!("reading {}", image.display()))?;
             let info = inspect(&data)?;
             println!("Image : {}", image.display());
             println!("Label : {}", info.label);
@@ -187,11 +186,18 @@ fn main() -> Result<()> {
             if blocks.is_empty() {
                 println!("(no blocks in {})", dir.display());
             } else {
-                println!("{:<5} {:<12} {:<7} {:>10} {:>10}", "IDX", "LABEL", "TYPE", "USED", "FREE");
+                println!(
+                    "{:<5} {:<12} {:<7} {:>10} {:>10}",
+                    "IDX", "LABEL", "TYPE", "USED", "FREE"
+                );
                 for b in blocks {
                     println!(
                         "{:<5} {:<12} {:<7} {:>10} {:>10}",
-                        b.index, b.info.label, b.info.fat_type, b.info.used_bytes, b.info.free_bytes
+                        b.index,
+                        b.info.label,
+                        b.info.fat_type,
+                        b.info.used_bytes,
+                        b.info.free_bytes
                     );
                 }
             }
@@ -209,8 +215,8 @@ fn main() -> Result<()> {
             for spec in &add_to {
                 let (index, path) = parse_add_spec(spec)?;
                 let path = PathBuf::from(path);
-                let data = std::fs::read(&path)
-                    .with_context(|| format!("reading {}", path.display()))?;
+                let data =
+                    std::fs::read(&path).with_context(|| format!("reading {}", path.display()))?;
                 let name = path
                     .file_name()
                     .and_then(|n| n.to_str())
@@ -219,8 +225,7 @@ fn main() -> Result<()> {
                 attach_file(&mut specs, index, name, data)?;
             }
             let img = build_usb_image(banks, &specs)?;
-            std::fs::write(&out, &img)
-                .with_context(|| format!("writing {}", out.display()))?;
+            std::fs::write(&out, &img).with_context(|| format!("writing {}", out.display()))?;
             println!(
                 "Wrote {} ({} banks x {} KiB = {:.1} MiB, {} formatted)",
                 out.display(),
@@ -237,8 +242,8 @@ fn main() -> Result<()> {
             image,
         } => {
             let bank: Vec<u8> = if let Some(path) = image {
-                let raw = std::fs::read(&path)
-                    .with_context(|| format!("reading {}", path.display()))?;
+                let raw =
+                    std::fs::read(&path).with_context(|| format!("reading {}", path.display()))?;
                 floppyctl::sfr::extract_bank(&raw, index)?.to_vec()
             } else if let Some(drive_index) = drive {
                 let d = floppyctl::device::list_usb_drives()?
@@ -282,8 +287,8 @@ fn main() -> Result<()> {
             }
         }
         Command::WriteUsb { image, index, yes } => {
-            let data = std::fs::read(&image)
-                .with_context(|| format!("reading {}", image.display()))?;
+            let data =
+                std::fs::read(&image).with_context(|| format!("reading {}", image.display()))?;
             let drives = floppyctl::device::list_usb_drives()?;
             let drive = drives
                 .into_iter()

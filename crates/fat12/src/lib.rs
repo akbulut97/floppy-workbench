@@ -7,8 +7,7 @@
 
 mod format;
 pub use format::{
-    add_file, format_image, format_image_with, make_bootable, remove_file, set_label,
-    FormatOptions,
+    add_file, format_image, format_image_with, make_bootable, remove_file, set_label, FormatOptions,
 };
 
 /// Errors produced by the `fat12` library.

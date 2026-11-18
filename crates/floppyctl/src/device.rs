@@ -219,7 +219,12 @@ pub fn list_usb_drives() -> Result<Vec<UsbDrive>> {
 
 /// Read the 1.44MB FAT12 image of bank `index` directly from the drive.
 pub fn read_bank(drive: &UsbDrive, index: u32) -> Result<Vec<u8>> {
-    read_region(drive, bank_offset(index) as u64, FLOPPY_IMAGE_BYTES, |_, _| {})
+    read_region(
+        drive,
+        bank_offset(index) as u64,
+        FLOPPY_IMAGE_BYTES,
+        |_, _| {},
+    )
 }
 
 /// Read `len` bytes from the start of the drive (for backing up the USB).
@@ -249,7 +254,13 @@ pub fn read_region(
         while pos < len {
             let want = (len - pos).min(1024 * 1024);
             let mut read = 0u32;
-            if ReadFile(handle, Some(&mut buf[pos..pos + want]), Some(&mut read), None).is_err()
+            if ReadFile(
+                handle,
+                Some(&mut buf[pos..pos + want]),
+                Some(&mut read),
+                None,
+            )
+            .is_err()
                 || read == 0
             {
                 let _ = CloseHandle(handle);

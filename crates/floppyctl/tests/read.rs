@@ -26,7 +26,10 @@ fn lists_files_in_a_bank_image() {
 #[test]
 fn boot_label_reads_label_from_sector() {
     let img = build_image(FloppyFormat::F1_44M, "MYVOL", 0, &[]).unwrap();
-    assert_eq!(floppyctl::boot_label(&img[..512]), Some("MYVOL".to_string()));
+    assert_eq!(
+        floppyctl::boot_label(&img[..512]),
+        Some("MYVOL".to_string())
+    );
 }
 
 #[test]
@@ -52,7 +55,10 @@ fn extract_bank_returns_the_right_slice() {
 
     let bank2 = extract_bank(&raw, 2).unwrap();
     assert_eq!(bank2.len(), FLOPPY_IMAGE_BYTES);
-    assert_eq!(bank2, &raw[bank_offset(2)..bank_offset(2) + FLOPPY_IMAGE_BYTES]);
+    assert_eq!(
+        bank2,
+        &raw[bank_offset(2)..bank_offset(2) + FLOPPY_IMAGE_BYTES]
+    );
 
     // And its file is listable.
     let files = list_fat_files(bank2).unwrap();

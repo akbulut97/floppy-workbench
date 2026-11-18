@@ -10,7 +10,10 @@ fn le16(buf: &[u8], off: usize) -> u16 {
 #[test]
 fn image_has_correct_length() {
     let img = format_image(FloppyFormat::F1_44M, "TEST", 0x12345678);
-    assert_eq!(img.len(), Geometry::for_format(FloppyFormat::F1_44M).image_size());
+    assert_eq!(
+        img.len(),
+        Geometry::for_format(FloppyFormat::F1_44M).image_size()
+    );
 }
 
 #[test]
@@ -49,7 +52,10 @@ fn fat_is_initialized() {
     let g = Geometry::for_format(FloppyFormat::F1_44M);
     let fat_start = g.reserved_sectors as usize * g.bytes_per_sector as usize;
     // FAT[0] = media descriptor + 0xFF 0xFF ; FAT[1] = EOC (0xFFF).
-    assert_eq!(img[fat_start], g.media_descriptor, "FAT[0] low byte = media");
+    assert_eq!(
+        img[fat_start], g.media_descriptor,
+        "FAT[0] low byte = media"
+    );
     assert_eq!(img[fat_start + 1], 0xFF);
     assert_eq!(img[fat_start + 2], 0xFF);
 }
@@ -59,7 +65,8 @@ fn root_dir_has_volume_label_entry() {
     let img = format_image(FloppyFormat::F1_44M, "DISKLABEL", 0x12345678);
     let g = Geometry::for_format(FloppyFormat::F1_44M);
     let bps = g.bytes_per_sector as usize;
-    let root = (g.reserved_sectors as usize + g.num_fats as usize * g.sectors_per_fat as usize) * bps;
+    let root =
+        (g.reserved_sectors as usize + g.num_fats as usize * g.sectors_per_fat as usize) * bps;
     // First root entry: 11-byte name (label, space-padded) + attr 0x08 (VOLUME_ID).
     assert_eq!(&img[root..root + 11], b"DISKLABEL  ", "label name field");
     assert_eq!(img[root + 11], 0x08, "ATTR_VOLUME_ID");

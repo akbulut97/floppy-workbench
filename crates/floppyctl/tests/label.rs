@@ -36,7 +36,12 @@ fn forbidden_characters_replaced() {
 fn labels_written_into_banks() {
     let fmt = floppyctl::parse_format("1.44").unwrap();
     let specs: Vec<BankSpec> = (0..3)
-        .map(|i| BankSpec { index: i, format: fmt, label: numbered_label("Floppy", i), files: vec![] })
+        .map(|i| BankSpec {
+            index: i,
+            format: fmt,
+            label: numbered_label("Floppy", i),
+            files: vec![],
+        })
         .collect();
     let img = build_usb_image(3, &specs).unwrap();
     for i in 0..3 {

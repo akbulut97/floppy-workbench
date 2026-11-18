@@ -99,7 +99,13 @@ pub fn numbered_label(prefix: &str, number: u32) -> String {
         .trim()
         .chars()
         .map(|c| c.to_ascii_uppercase())
-        .map(|c| if !c.is_ascii() || c.is_ascii_control() || FORBIDDEN.contains(c) { '_' } else { c })
+        .map(|c| {
+            if !c.is_ascii() || c.is_ascii_control() || FORBIDDEN.contains(c) {
+                '_'
+            } else {
+                c
+            }
+        })
         .collect();
     if clean.is_empty() {
         return "NO NAME".into();

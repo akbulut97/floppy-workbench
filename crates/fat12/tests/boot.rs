@@ -69,8 +69,14 @@ fn remove_file_deletes_it() {
     fat12::remove_file(&mut img, "GONE.TXT").unwrap();
 
     let fs = FileSystem::new(Cursor::new(img), FsOptions::new()).unwrap();
-    assert!(fs.root_dir().open_file("GONE.TXT").is_err(), "deleted file is gone");
-    assert!(fs.root_dir().open_file("KEEP.TXT").is_ok(), "other file remains");
+    assert!(
+        fs.root_dir().open_file("GONE.TXT").is_err(),
+        "deleted file is gone"
+    );
+    assert!(
+        fs.root_dir().open_file("KEEP.TXT").is_ok(),
+        "other file remains"
+    );
 }
 
 #[test]
@@ -98,7 +104,10 @@ fn make_bootable_places_system_files_and_boot_code() {
     // Both system files mountable and byte-identical.
     let fs = FileSystem::new(Cursor::new(img), FsOptions::new()).expect("mount");
     for (name, expected) in [("KERNEL.SYS", &kernel), ("COMMAND.COM", &command)] {
-        let mut f = fs.root_dir().open_file(name).unwrap_or_else(|_| panic!("open {name}"));
+        let mut f = fs
+            .root_dir()
+            .open_file(name)
+            .unwrap_or_else(|_| panic!("open {name}"));
         let mut back = Vec::new();
         f.read_to_end(&mut back).unwrap();
         assert_eq!(&back, expected, "{name} contents");

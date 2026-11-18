@@ -107,8 +107,8 @@ impl BlockSet {
             if let Some(index) = self.naming.parse_index(&name) {
                 let path = dir_entry.path();
                 let data = std::fs::read(&path)?;
-                let info = inspect(&data)
-                    .with_context(|| format!("inspecting {}", path.display()))?;
+                let info =
+                    inspect(&data).with_context(|| format!("inspecting {}", path.display()))?;
                 entries.push(BlockEntry { index, path, info });
             }
         }

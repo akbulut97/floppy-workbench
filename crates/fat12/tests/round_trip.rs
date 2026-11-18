@@ -11,7 +11,11 @@ fn mountable(format: FloppyFormat) {
     let cursor = Cursor::new(img);
     let fs = FileSystem::new(cursor, FsOptions::new())
         .unwrap_or_else(|e| panic!("mount failed for {format:?}: {e:?}"));
-    assert_eq!(fs.fat_type(), fatfs::FatType::Fat12, "{format:?} must be FAT12");
+    assert_eq!(
+        fs.fat_type(),
+        fatfs::FatType::Fat12,
+        "{format:?} must be FAT12"
+    );
 }
 
 #[test]

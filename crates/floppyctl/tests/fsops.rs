@@ -12,7 +12,11 @@ fn blank() -> Vec<u8> {
 }
 
 fn names(img: &[u8], path: &str) -> Vec<String> {
-    let mut v: Vec<String> = list_dir(img, path).unwrap().into_iter().map(|e| e.name).collect();
+    let mut v: Vec<String> = list_dir(img, path)
+        .unwrap()
+        .into_iter()
+        .map(|e| e.name)
+        .collect();
     v.sort();
     v
 }
@@ -128,7 +132,10 @@ fn add_host_folder_recursively() {
     assert_eq!(names(&img, "PROJ"), vec!["README.TXT", "SUB"]);
     assert_eq!(names(&img, "PROJ/SUB"), vec!["A.BIN", "DEEP"]);
     assert_eq!(read_file_at(&img, "PROJ/README.TXT").unwrap(), b"hello");
-    assert_eq!(read_file_at(&img, "PROJ/SUB/A.BIN").unwrap(), vec![7u8; 3000]);
+    assert_eq!(
+        read_file_at(&img, "PROJ/SUB/A.BIN").unwrap(),
+        vec![7u8; 3000]
+    );
     assert_eq!(read_file_at(&img, "PROJ/SUB/DEEP/Z.TXT").unwrap(), b"zz");
 
     // Adding the same folder again merges/overwrites instead of failing.
@@ -161,7 +168,11 @@ fn find_entries_searches_all_folders_case_insensitively() {
     add_file_at(&mut img, "PROGS", "PART1.NC", b"1").unwrap();
     add_file_at(&mut img, "PROGS/OLD", "PART2.NC", b"22").unwrap();
 
-    let mut hits: Vec<String> = find_entries(&img, "part").unwrap().into_iter().map(|(p, _)| p).collect();
+    let mut hits: Vec<String> = find_entries(&img, "part")
+        .unwrap()
+        .into_iter()
+        .map(|(p, _)| p)
+        .collect();
     hits.sort();
     assert_eq!(hits, vec!["PROGS/OLD/PART2.NC", "PROGS/PART1.NC"]);
 

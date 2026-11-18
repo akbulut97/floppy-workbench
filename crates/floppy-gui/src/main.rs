@@ -304,7 +304,9 @@ fn mutate_bank(
     let drive = find_drive(drive_index)?;
     let mut img = device::read_bank(&drive, index).map_err(|e| e.to_string())?;
     if floppyctl::inspect(&img).is_err() {
-        return Err(format!("Block {index} isn't formatted — format the USB first."));
+        return Err(format!(
+            "Block {index} isn't formatted — format the USB first."
+        ));
     }
     op(&mut img)?;
     device::write_bank(&drive, index, &img).map_err(|e| e.to_string())?;
@@ -553,7 +555,8 @@ fn set_block_label(drive_index: u32, index: u32, label: String) -> Result<String
 #[tauri::command]
 fn format_one_block(drive_index: u32, index: u32, label: String) -> Result<(), String> {
     let drive = find_drive(drive_index)?;
-    let img = build_image(fat12::FloppyFormat::F1_44M, &label, 0, &[]).map_err(|e| e.to_string())?;
+    let img =
+        build_image(fat12::FloppyFormat::F1_44M, &label, 0, &[]).map_err(|e| e.to_string())?;
     device::write_bank(&drive, index, &img).map_err(|e| e.to_string())
 }
 
@@ -590,12 +593,20 @@ fn search_blocks(
 
     let mut hits = Vec::new();
     for block in 0..count {
-        let Ok(img) = floppyctl::sfr::extract_bank(&raw, block) else { break };
+        let Ok(img) = floppyctl::sfr::extract_bank(&raw, block) else {
+            break;
+        };
         if floppyctl::inspect(img).is_err() {
             continue; // blank or non-FAT block
         }
         for (path, e) in floppyctl::fsops::find_entries(img, &query).unwrap_or_default() {
-            hits.push(SearchHit { block, path, name: e.name, size: e.size, is_dir: e.is_dir });
+            hits.push(SearchHit {
+                block,
+                path,
+                name: e.name,
+                size: e.size,
+                is_dir: e.is_dir,
+            });
         }
     }
     Ok(hits)
@@ -676,7 +687,8 @@ fn format_block_range(
     label: String,
 ) -> Result<(), String> {
     let drive = find_drive(drive_index)?;
-    let img = build_image(fat12::FloppyFormat::F1_44M, &label, 0, &[]).map_err(|e| e.to_string())?;
+    let img =
+        build_image(fat12::FloppyFormat::F1_44M, &label, 0, &[]).map_err(|e| e.to_string())?;
     for i in 0..count {
         device::write_bank(&drive, start + i, &img).map_err(|e| e.to_string())?;
         emit_progress(&window, "write", (i + 1) as u64, count as u64);

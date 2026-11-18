@@ -10,7 +10,10 @@ use fatfs::{FileSystem, FsOptions};
 fn parse_format_accepts_known_sizes() {
     assert_eq!(floppyctl::parse_format("720").unwrap(), FloppyFormat::F720K);
     assert_eq!(floppyctl::parse_format("1.2").unwrap(), FloppyFormat::F1_2M);
-    assert_eq!(floppyctl::parse_format("1.44").unwrap(), FloppyFormat::F1_44M);
+    assert_eq!(
+        floppyctl::parse_format("1.44").unwrap(),
+        FloppyFormat::F1_44M
+    );
 }
 
 #[test]
@@ -42,15 +45,17 @@ fn inspect_reports_label_and_space() {
     assert_eq!(info.label, "INFODISK");
     assert_eq!(info.fat_type, "FAT12");
     assert_eq!(info.total_bytes, info.used_bytes + info.free_bytes);
-    assert!(info.free_bytes > 1_000_000, "a blank 1.44M disk is mostly free");
+    assert!(
+        info.free_bytes > 1_000_000,
+        "a blank 1.44M disk is mostly free"
+    );
 }
 
 #[test]
 fn inspect_used_grows_after_adding_file() {
-    let empty = floppyctl::inspect(
-        &floppyctl::build_image(FloppyFormat::F1_44M, "D", 1, &[]).unwrap(),
-    )
-    .unwrap();
+    let empty =
+        floppyctl::inspect(&floppyctl::build_image(FloppyFormat::F1_44M, "D", 1, &[]).unwrap())
+            .unwrap();
     let filled = floppyctl::inspect(
         &floppyctl::build_image(
             FloppyFormat::F1_44M,

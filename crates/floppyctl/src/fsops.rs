@@ -150,12 +150,20 @@ pub fn read_tree(img: &[u8], path: &str) -> Result<Vec<TreeNode>> {
         let mut f = root.open_file(path)?;
         let mut data = Vec::new();
         f.read_to_end(&mut data)?;
-        nodes.push(TreeNode { rel: String::new(), is_dir: false, data });
+        nodes.push(TreeNode {
+            rel: String::new(),
+            is_dir: false,
+            data,
+        });
         return Ok(nodes);
     }
 
     // Directory: breadth-first so parents precede children.
-    nodes.push(TreeNode { rel: String::new(), is_dir: true, data: Vec::new() });
+    nodes.push(TreeNode {
+        rel: String::new(),
+        is_dir: true,
+        data: Vec::new(),
+    });
     let mut queue = vec![(path.to_string(), String::new())];
     while let Some((dir_path, rel_prefix)) = queue.pop() {
         for entry in root.open_dir(&dir_path)?.iter() {
@@ -167,13 +175,21 @@ pub fn read_tree(img: &[u8], path: &str) -> Result<Vec<TreeNode>> {
             let child_path = join(&dir_path, &name);
             let child_rel = join(&rel_prefix, &name);
             if e.is_dir() {
-                nodes.push(TreeNode { rel: child_rel.clone(), is_dir: true, data: Vec::new() });
+                nodes.push(TreeNode {
+                    rel: child_rel.clone(),
+                    is_dir: true,
+                    data: Vec::new(),
+                });
                 queue.push((child_path, child_rel));
             } else {
                 let mut f = root.open_file(&child_path)?;
                 let mut data = Vec::new();
                 f.read_to_end(&mut data)?;
-                nodes.push(TreeNode { rel: child_rel, is_dir: false, data });
+                nodes.push(TreeNode {
+                    rel: child_rel,
+                    is_dir: false,
+                    data,
+                });
             }
         }
     }
@@ -187,9 +203,17 @@ pub fn read_host_tree(path: &std::path::Path) -> Result<Vec<TreeNode>> {
     let meta = std::fs::metadata(path)?;
     if !meta.is_dir() {
         let data = std::fs::read(path)?;
-        return Ok(vec![TreeNode { rel: String::new(), is_dir: false, data }]);
+        return Ok(vec![TreeNode {
+            rel: String::new(),
+            is_dir: false,
+            data,
+        }]);
     }
-    let mut nodes = vec![TreeNode { rel: String::new(), is_dir: true, data: Vec::new() }];
+    let mut nodes = vec![TreeNode {
+        rel: String::new(),
+        is_dir: true,
+        data: Vec::new(),
+    }];
     let mut queue = vec![(path.to_path_buf(), String::new())];
     while let Some((dir, rel_prefix)) = queue.pop() {
         let mut entries: Vec<_> = std::fs::read_dir(&dir)?.collect::<std::io::Result<_>>()?;
@@ -202,11 +226,19 @@ pub fn read_host_tree(path: &std::path::Path) -> Result<Vec<TreeNode>> {
                 .to_uppercase();
             let rel = join(&rel_prefix, &name);
             if e.file_type()?.is_dir() {
-                nodes.push(TreeNode { rel: rel.clone(), is_dir: true, data: Vec::new() });
+                nodes.push(TreeNode {
+                    rel: rel.clone(),
+                    is_dir: true,
+                    data: Vec::new(),
+                });
                 queue.push((e.path(), rel));
             } else {
                 let data = std::fs::read(e.path())?;
-                nodes.push(TreeNode { rel, is_dir: false, data });
+                nodes.push(TreeNode {
+                    rel,
+                    is_dir: false,
+                    data,
+                });
             }
         }
     }

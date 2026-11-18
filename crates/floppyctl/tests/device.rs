@@ -27,7 +27,9 @@ fn rejects_fixed_disk() {
 #[test]
 fn rejects_image_larger_than_drive() {
     let err = check_write_target(&drive(true, 1_000_000), 2_000_000).unwrap_err();
-    assert!(err.to_string().to_lowercase().contains("larger") || err.to_string().contains("exceed"));
+    assert!(
+        err.to_string().to_lowercase().contains("larger") || err.to_string().contains("exceed")
+    );
 }
 
 #[test]

@@ -172,7 +172,7 @@ fn write_boot_sector(img: &mut [u8], g: &Geometry, opts: &FormatOptions) {
     img[0x1A..0x1C].copy_from_slice(&g.num_heads.to_le_bytes());
     img[0x1C..0x20].copy_from_slice(&0u32.to_le_bytes()); // hidden sectors
     img[0x20..0x24].copy_from_slice(&0u32.to_le_bytes()); // total sectors (32-bit)
-    // --- Extended BPB (FAT12/16) ---
+                                                          // --- Extended BPB (FAT12/16) ---
     img[0x24] = 0x00; // drive number (floppy)
     img[0x25] = 0x00; // reserved
     img[0x26] = 0x29; // extended boot signature
@@ -193,7 +193,8 @@ fn write_boot_sector(img: &mut [u8], g: &Geometry, opts: &FormatOptions) {
 /// Write the volume label as the first root-directory entry (ATTR_VOLUME_ID).
 fn write_root_volume_label(img: &mut [u8], g: &Geometry, label: &str) {
     let bps = g.bytes_per_sector as usize;
-    let root = (g.reserved_sectors as usize + g.num_fats as usize * g.sectors_per_fat as usize) * bps;
+    let root =
+        (g.reserved_sectors as usize + g.num_fats as usize * g.sectors_per_fat as usize) * bps;
     img[root..root + 11].copy_from_slice(&label_field(label));
     img[root + 11] = 0x08; // ATTR_VOLUME_ID
 }
