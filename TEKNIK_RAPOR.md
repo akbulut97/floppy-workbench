@@ -218,14 +218,14 @@ Güncel Floppy Workbench sürümü itibarıyla durum:
 **Aygıt**
 - [x] USB disket emülatör aygıtını algıla ve seç (yalnızca çıkarılabilir sürücüler; takma/çıkarmada otomatik yeniden tarama)
 - [x] Blokları say/listele (1–100), meta veriyi oku (etiket, dolu/boş alan)
-- [ ] 4 görünüm modu + yenileme: yenileme yapıldı; 4 görünüm modu yerine tek liste görünümü var
-- [x] Tüm bloklarda dosya adı arama (ek)
+- [x] Görünüm modları + yenileme: özgün 4 mod yerine liste ve ızgara (ızgara doluluğu gösterir)
+- [x] Tüm bloklarda dosya adı arama; her bloğun bütünlük kontrolü (ek)
 
 **Format**
 - [x] USB'yi N bloğa böl (toplam format)
 - [x] Tek blok format (720K / 1.2M / 1.44M, FAT12)
 - [x] Quick format
-- [x] Toplu format: serbest çoklu seçim yerine blok **aralığı formatlama** olarak yapıldı
+- [x] Toplu (çoklu seçim) format: Ctrl/Shift-tıkla blok seçimi veya aralık formatlama
 - [x] Bootable DOS disketi oluşturma (FreeDOS)
 - [x] Yıkıcı işlemlerde onay diyaloğu
 - [x] Son format ayarını hatırlama (ayrıca cihaz, sekme ve dil)
@@ -234,7 +234,7 @@ Güncel Floppy Workbench sürümü itibarıyla durum:
 - [x] Bloğa dosya yükle / bloktan dosya indir (tam dosya gezgini: klasörler, kes/kopyala/yapıştır, yeniden adlandır, önizleme)
 - [x] Bloğa `.img` yaz / bloğu `.img` olarak kaydet
 - [x] Bir bloğu başka bloğa kopyala (ek)
-- [ ] Birden çok ayrı `.img` dosyasını toplu yaz/kaydet: kısmen aralık yedekleme/geri yükleme ile karşılanıyor
+- [x] Toplu yaz/kaydet: çok sayıda `.img` dosyasını ardışık bloklara yükle; seçili blokları `BLOCKnnn.img` olarak kaydet
 - [x] Tüm USB'yi (veya ilk N bankayı) yedekle / geri yükle
 - [x] Her yazmadan sonra geri okuyarak doğrulama (ek)
 

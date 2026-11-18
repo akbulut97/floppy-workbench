@@ -278,6 +278,46 @@
       .blocks-list li.blank .nm { color: var(--muted); font-style: italic; }
       .mini-empty { color: var(--muted); font-size: 12px; padding: 14px 10px; cursor: default; }
       .mini-empty:hover { background: transparent; }
+      .blocks-tools {
+        display: flex; align-items: center; gap: 6px; padding: 6px 12px;
+        border-bottom: 1px solid var(--line); font-size: 12px; color: var(--muted);
+      }
+      .blocks-tools button { padding: 4px 9px; font-size: 12px; }
+      .blocks-tools .sel-count { flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+      .view-toggle { display: inline-flex; border: 1px solid var(--line); border-radius: 7px; overflow: hidden; }
+      .view-toggle button { border: 0; border-radius: 0; padding: 4px 8px; background: transparent; color: var(--muted); }
+      .view-toggle button[aria-pressed="true"] { background: var(--amber-soft); color: var(--amber); }
+      /* multi-selection (Ctrl/Shift-click) */
+      .blocks-list li.multi { box-shadow: inset 0 0 0 1px var(--amber-dim); }
+      /* integrity dot + usage bar */
+      .blocks-list li .hdot { width: 7px; height: 7px; border-radius: 50%; flex: none; margin-left: auto; background: transparent; }
+      .blocks-list li.h-ok .hdot { background: var(--ok); }
+      .blocks-list li.h-warning .hdot { background: var(--amber); }
+      .blocks-list li.h-corrupt .hdot { background: var(--danger); }
+      .blocks-list li.h-corrupt .nm { color: var(--danger); }
+      .blocks-list li .bar { display: none; }
+      /* grid view */
+      .explorer.wide { grid-template-columns: 360px 1fr; }
+      .blocks-list.grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(100px, 1fr)); gap: 6px; }
+      .blocks-list.grid .mini-empty { grid-column: 1 / -1; }
+      .blocks-list.grid li {
+        flex-wrap: wrap; gap: 4px 6px; padding: 8px; min-width: 0;
+        border: 1px solid var(--line-soft); align-items: center;
+      }
+      .blocks-list.grid li .nm { flex: 1 1 100%; font-size: 12px; order: 3; }
+      .blocks-list.grid li .bar {
+        display: block; order: 4; flex: 1 1 100%; height: 4px; border-radius: 2px; background: var(--line); overflow: hidden;
+      }
+      .blocks-list.grid li .bar i { display: block; height: 100%; width: 0; background: var(--amber); }
+      .blocks-list.grid li.h-corrupt { border-color: rgba(229, 96, 77, 0.5); }
+      .blocks-list.grid li.blank { opacity: 0.7; }
+      .upd-banner {
+        display: flex; align-items: center; gap: 10px; margin: 0 22px 10px; padding: 8px 12px;
+        border: 1px solid var(--amber-dim); border-radius: 8px; background: var(--amber-soft); font-size: 13px;
+      }
+      .upd-banner[hidden] { display: none; }
+      .upd-banner span { flex: 1; }
+      .upd-banner button { padding: 4px 10px; font-size: 12px; }
 
       .files-pane { padding: 0; }
       .pane-head {
@@ -454,6 +494,21 @@
           <option value="tr">Türkçe</option>
         </select>
       </label>
+      <label class="set-row" style="margin-top: 10px; justify-content: flex-start">
+        <input type="checkbox" id="updAuto" checked />
+        <span data-i18n="settings.updates">Check for updates at startup</span>
+      </label>
+      <div class="set-row" style="margin-top: 8px">
+        <span class="mono" id="appVer" style="color: var(--muted)"></span>
+        <button class="ghost" id="updCheck" style="padding: 4px 10px; font-size: 12px" data-i18n="settings.checkNow">Check now</button>
+      </div>
+      <div id="updMsg" style="margin-top: 6px; font-size: 12px; color: var(--muted)"></div>
+    </div>
+
+    <div id="updBanner" class="upd-banner" hidden>
+      <span id="updText"></span>
+      <button id="updGo" data-i18n="upd.download">Download</button>
+      <button class="ghost" id="updDismiss" aria-label="Dismiss">✕</button>
     </div>
 
     <nav class="tabs" role="tablist">
@@ -543,6 +598,14 @@
               <span class="inline" style="gap: 6px">
                 <input type="number" id="blockCount" value="100" min="1" max="1000" style="width: 66px" data-i18n-title="browse.countTitle" title="How many blocks to list" />
                 <button class="ghost" id="scanBtn" data-i18n="browse.scan">Scan</button>
+              </span>
+            </div>
+            <div class="blocks-tools">
+              <span class="sel-count" id="blkSel"></span>
+              <button class="ghost" id="checkBtn" data-i18n="browse.check" data-i18n-title="browse.checkTitle" title="Check the integrity of the listed blocks">Check</button>
+              <span class="view-toggle">
+                <button id="viewList" aria-pressed="true" data-i18n-title="view.list" title="List view">☰</button>
+                <button id="viewGrid" aria-pressed="false" data-i18n-title="view.grid" title="Grid view">▦</button>
               </span>
             </div>
             <ul class="blocks-list" id="blocksList"><li class="mini-empty" data-i18n="browse.chooseScan">Choose a USB, then Scan.</li></ul>
@@ -681,6 +744,12 @@
       <button data-bact="export" data-i18n="bctx.export">Save as .img…</button>
       <button data-bact="import" class="danger-item" data-i18n="bctx.import">Load .img into block…</button>
       <button data-bact="clone" class="danger-item" data-i18n="bctx.clone">Copy to block…</button>
+      <button data-bact="importmany" class="danger-item" data-i18n="bctx.importMany">Load .img files from here…</button>
+      <button data-bact="check" data-i18n="bctx.check">Check block</button>
+      <!-- shown instead of the above when several blocks are selected -->
+      <button data-bact="mformat" class="danger-item" data-multi></button>
+      <button data-bact="mexport" data-multi></button>
+      <button data-bact="mcheck" data-multi></button>
     </div>
 
     <div class="rz rz-n" data-dir="North"></div>
@@ -769,6 +838,27 @@
           "dyn.cloneDone": "Block {from} copied to block {to} and verified.",
           "err.verify": "Verification failed — what was read back differs from what was written (byte {at}). The USB stick may be failing.",
           "err.badImage": "That file is not a 1.44 MB floppy image (1,474,560 bytes).", "err.sameBlock": "Source and target are the same block.",
+          "err.badImageFile": "{name} is not a 1.44 MB floppy image — nothing was written.",
+          "err.noRoom": "Not enough blocks: these images would need blocks up to {last}, but the USB has only {n}.",
+          "err.beyondEnd": "Block {i} is beyond the end of the USB ({n} blocks).",
+          "browse.check": "Check", "browse.checkTitle": "Check the integrity of the listed blocks (or the selected ones)",
+          "view.list": "List view", "view.grid": "Grid view",
+          "bctx.check": "Check block", "bctx.importMany": "Load .img files from here…",
+          "dyn.multiSel": "{n} selected", "dyn.multiHint": "Ctrl/Shift-click to select several",
+          "dyn.formatN": "Format {n} blocks…", "dyn.exportN": "Save {n} blocks as .img…", "dyn.checkN": "Check {n} blocks",
+          "dyn.formatManyConfirm": "Format {n} blocks ({list})?\n\nEverything on them will be erased.",
+          "dyn.formattedN": "Formatted {n} blocks.",
+          "dyn.exportPick": "Choose a folder for the .img files", "dyn.exportedN": "Saved {n} block(s) to {dir}",
+          "dyn.importManyTitle": "Choose floppy images (written in name order)",
+          "dyn.importManyConfirm": "Write {n} image(s) into blocks {from}–{to}?\n\nThe current contents of those blocks will be replaced.",
+          "dyn.importManyDone": "Wrote and verified {n} image(s) in blocks {from}–{to}.",
+          "dyn.checking": "Checking {n} block(s)…",
+          "dyn.checkDone": "Checked {n}: {ok} OK, {warn} warning, {bad} corrupt, {blank} blank.",
+          "h.ok": "OK", "h.warning": "Warning", "h.corrupt": "Corrupt", "h.blank": "Blank",
+          "dyn.healthTip": "{status} · {files} file(s) · {used} / {total} KB",
+          "settings.updates": "Check for updates at startup", "settings.checkNow": "Check now",
+          "upd.available": "Floppy Workbench {v} is available (you have {cur}).", "upd.download": "Download",
+          "upd.latest": "You have the latest version.", "upd.failed": "Couldn't check for updates (offline?).", "upd.checking": "Checking…",
           "dyn.bootableConfirm": "Make block {i} a FreeDOS boot floppy? Everything on it is erased.",
           "dyn.bootLabelPrompt": "Volume label:", "dyn.bootableDone": "Block {i} is now FreeDOS-bootable.",
           "pv.saveAs": "Save as…", "pv.close": "Close", "col.name": "Name", "col.bytes": "Bytes",
@@ -858,6 +948,27 @@
           "dyn.cloneDone": "Blok {from}, blok {to}'ya kopyalandı ve doğrulandı.",
           "err.verify": "Doğrulama başarısız — geri okunan veri yazılandan farklı ({at}. bayt). USB bellek arızalanıyor olabilir.",
           "err.badImage": "Bu dosya 1.44 MB disket imajı değil (1.474.560 bayt).", "err.sameBlock": "Kaynak ve hedef aynı blok.",
+          "err.badImageFile": "{name} bir 1.44 MB disket imajı değil — hiçbir şey yazılmadı.",
+          "err.noRoom": "Yeterli blok yok: bu imajlar {last}. bloğa kadar yer istiyor ama USB'de yalnızca {n} blok var.",
+          "err.beyondEnd": "Blok {i}, USB'nin sonunun ötesinde ({n} blok).",
+          "browse.check": "Kontrol", "browse.checkTitle": "Listelenen (veya seçili) blokların bütünlüğünü kontrol et",
+          "view.list": "Liste görünümü", "view.grid": "Izgara görünümü",
+          "bctx.check": "Bloğu kontrol et", "bctx.importMany": "Buradan itibaren .img dosyaları yükle…",
+          "dyn.multiSel": "{n} seçili", "dyn.multiHint": "Birden çok seçmek için Ctrl/Shift-tık",
+          "dyn.formatN": "{n} bloğu formatla…", "dyn.exportN": "{n} bloğu .img olarak kaydet…", "dyn.checkN": "{n} bloğu kontrol et",
+          "dyn.formatManyConfirm": "{n} blok formatlansın mı ({list})?\n\nÜzerlerindeki her şey silinecek.",
+          "dyn.formattedN": "{n} blok formatlandı.",
+          "dyn.exportPick": ".img dosyaları için klasör seçin", "dyn.exportedN": "{n} blok {dir} klasörüne kaydedildi",
+          "dyn.importManyTitle": "Disket imajlarını seçin (ad sırasıyla yazılır)",
+          "dyn.importManyConfirm": "{n} imaj {from}–{to} bloklarına yazılsın mı?\n\nBu blokların mevcut içeriği değiştirilecek.",
+          "dyn.importManyDone": "{n} imaj {from}–{to} bloklarına yazıldı ve doğrulandı.",
+          "dyn.checking": "{n} blok kontrol ediliyor…",
+          "dyn.checkDone": "{n} blok kontrol edildi: {ok} sağlam, {warn} uyarı, {bad} bozuk, {blank} boş.",
+          "h.ok": "Sağlam", "h.warning": "Uyarı", "h.corrupt": "Bozuk", "h.blank": "Boş",
+          "dyn.healthTip": "{status} · {files} dosya · {used} / {total} KB",
+          "settings.updates": "Açılışta güncellemeleri kontrol et", "settings.checkNow": "Şimdi kontrol et",
+          "upd.available": "Floppy Workbench {v} yayımlandı (sizdeki: {cur}).", "upd.download": "İndir",
+          "upd.latest": "En güncel sürümü kullanıyorsunuz.", "upd.failed": "Güncelleme kontrol edilemedi (çevrimdışı?).", "upd.checking": "Kontrol ediliyor…",
           "dyn.bootableConfirm": "Blok {i} FreeDOS açılış disketi yapılsın mı? Üzerindeki her şey silinir.",
           "dyn.bootLabelPrompt": "Birim etiketi:", "dyn.bootableDone": "Blok {i} artık FreeDOS ile açılabilir.",
           "pv.saveAs": "Farklı kaydet…", "pv.close": "Kapat", "col.name": "Ad", "col.bytes": "Bayt",
@@ -919,7 +1030,10 @@
         [/short (read|write)|read failed|write failed/i, "err.io"],
         [/invalid file name/i, "err.badName"],
         [/verification failed at byte (\d+)/i, "err.verify", (m) => ({ at: m[1] })],
+        [/([^\\/:]+\.\w+): image is \d+ bytes; a block needs/i, "err.badImageFile", (m) => ({ name: m[1] })],
         [/needs a 1\.44 MB floppy image/i, "err.badImage"],
+        [/would need blocks up to (\d+), but the USB only has (\d+)/i, "err.noRoom", (m) => ({ last: m[1], n: m[2] })],
+        [/block (\d+) is beyond the end \((\d+) blocks/i, "err.beyondEnd", (m) => ({ i: m[1], n: m[2] })],
         [/source and target block are the same/i, "err.sameBlock"],
       ];
       function tErr(e) {
@@ -1021,6 +1135,9 @@
         selectedBlock = null;
         currentPath = "";
         selectedNames.clear();
+        selectedBlocks.clear();
+        healthMap.clear();
+        $("blkSel").textContent = "";
         $("blocksList").innerHTML = `<li class="mini-empty">${t("dyn.pressScan")}</li>`;
         $("crumbs").innerHTML = `<span style="color:var(--muted)">${t("browse.noBlock")}</span>`;
         $("paneMeta").textContent = "";
@@ -1394,16 +1511,169 @@
       // ---- Block (left pane) context menu ----
       function openBlockCtx(x, y) {
         const m = $("blockCtx");
+        const n = selectedBlocks.size;
+        const multi = n > 1;
+        m.querySelectorAll("button").forEach((b) => {
+          b.style.display = (b.hasAttribute("data-multi") === multi) ? "block" : "none";
+        });
+        if (multi) {
+          m.querySelector('[data-bact="mformat"]').textContent = t("dyn.formatN", { n });
+          m.querySelector('[data-bact="mexport"]').textContent = t("dyn.exportN", { n });
+          m.querySelector('[data-bact="mcheck"]').textContent = t("dyn.checkN", { n });
+        }
         m.hidden = false;
-        m.style.left = Math.min(x, window.innerWidth - 160) + "px";
-        m.style.top = Math.min(y, window.innerHeight - 120) + "px";
+        const h = m.offsetHeight || 300;
+        m.style.left = Math.min(x, window.innerWidth - 230) + "px";
+        m.style.top = Math.max(4, Math.min(y, window.innerHeight - h - 4)) + "px";
       }
+
+      // ---- Block multi-selection (Ctrl/Shift-click) ----
+      const selectedBlocks = new Set();
+      let anchorBlock = null;
+      const sortedSel = () => [...selectedBlocks].sort((a, b) => a - b);
+      function paintBlockSel() {
+        document.querySelectorAll("#blocksList li[data-index]").forEach((li) =>
+          li.classList.toggle("multi", selectedBlocks.size > 1 && selectedBlocks.has(parseInt(li.dataset.index, 10))));
+        $("blkSel").textContent = selectedBlocks.size > 1 ? t("dyn.multiSel", { n: selectedBlocks.size }) : "";
+        $("blkSel").title = t("dyn.multiHint");
+      }
+      function blockClick(e, idx) {
+        if (e.shiftKey && anchorBlock !== null) {
+          if (!(e.ctrlKey || e.metaKey)) selectedBlocks.clear();
+          const [a, b] = [Math.min(anchorBlock, idx), Math.max(anchorBlock, idx)];
+          for (let i = a; i <= b; i++) selectedBlocks.add(i);
+          paintBlockSel();
+          return;
+        }
+        if (e.ctrlKey || e.metaKey) {
+          if (selectedBlocks.size === 0 && selectedBlock !== null) selectedBlocks.add(selectedBlock);
+          if (selectedBlocks.has(idx)) selectedBlocks.delete(idx); else selectedBlocks.add(idx);
+          anchorBlock = idx;
+          paintBlockSel();
+          return;
+        }
+        selectedBlocks.clear();
+        selectedBlocks.add(idx);
+        anchorBlock = idx;
+        paintBlockSel();
+        selectBlock(idx);
+      }
+
+      // ---- Block integrity (health) ----
+      const healthMap = new Map();
+      function applyHealth(li, r) {
+        li.classList.remove("h-ok", "h-warning", "h-corrupt", "h-blank");
+        const bar = li.querySelector(".bar i");
+        if (!r) { li.removeAttribute("title"); if (bar) bar.style.width = "0"; return; }
+        li.classList.add("h-" + r.status);
+        if (bar) bar.style.width = r.total_bytes ? Math.round((r.used_bytes / r.total_bytes) * 100) + "%" : "0";
+        const tip = t("dyn.healthTip", {
+          status: t("h." + r.status), files: r.files,
+          used: Math.round(r.used_bytes / 1024), total: Math.round(r.total_bytes / 1024),
+        });
+        li.title = r.issues && r.issues.length ? tip + "\n• " + r.issues.join("\n• ") : tip;
+      }
+      async function checkBlocks(indices) {
+        const driveIndex = selectedDrive();
+        if (isNaN(driveIndex)) { setStatus($("readStatus"), t("dyn.chooseTop"), "err"); return; }
+        if (!indices || !indices.length) {
+          indices = [...document.querySelectorAll("#blocksList li[data-index]")].map((li) => parseInt(li.dataset.index, 10));
+        }
+        if (!indices.length) { setStatus($("readStatus"), t("dyn.pressScan"), "err"); return; }
+        setStatus($("readStatus"), t("dyn.checking", { n: indices.length }));
+        try {
+          const res = await invoke("check_blocks", { driveIndex, indices });
+          const c = { ok: 0, warning: 0, corrupt: 0, blank: 0 };
+          for (const r of res) {
+            healthMap.set(r.index, r);
+            c[r.status]++;
+            const li = document.querySelector(`#blocksList li[data-index="${r.index}"]`);
+            if (li) applyHealth(li, r);
+          }
+          setStatus($("readStatus"), t("dyn.checkDone", { n: res.length, ok: c.ok, warn: c.warning, bad: c.corrupt, blank: c.blank }),
+            c.corrupt ? "err" : "ok");
+        } catch (e) { setStatus($("readStatus"), tErr(e), "err"); }
+      }
+      $("checkBtn").addEventListener("click", () => checkBlocks(selectedBlocks.size > 1 ? sortedSel() : null));
+      // A block's contents changed: its old health result no longer applies.
+      function forgetHealth(indices) {
+        for (const i of indices) {
+          healthMap.delete(i);
+          const li = document.querySelector(`#blocksList li[data-index="${i}"]`);
+          if (li) applyHealth(li, null);
+        }
+      }
+
+      // ---- List / grid view ----
+      function setView(v) {
+        const grid = v === "grid";
+        $("blocksList").classList.toggle("grid", grid);
+        document.querySelector(".explorer").classList.toggle("wide", grid);
+        $("viewList").setAttribute("aria-pressed", String(!grid));
+        $("viewGrid").setAttribute("aria-pressed", String(grid));
+        try { localStorage.setItem("fw_view", v); } catch (e) {}
+      }
+      $("viewList").addEventListener("click", () => setView("list"));
+      $("viewGrid").addEventListener("click", () => setView("grid"));
+      try { setView(localStorage.getItem("fw_view") || "list"); } catch (e) { setView("list"); }
       function blockLiLabel(idx, label, formatted) {
         const li = document.querySelector(`#blocksList li[data-index="${idx}"]`);
         if (!li) return;
         li.querySelector(".nm").textContent = formatted ? (label || t("dyn.noLabel")) : t("dyn.blank");
         li.classList.toggle("blank", !formatted);
         li.classList.toggle("has-label", formatted && !!label);
+        forgetHealth([idx]);
+      }
+      // Re-read the labels of `indices` after a bulk write.
+      async function refreshBlockLabels(driveIndex, indices) {
+        for (const i of indices) {
+          try {
+            const v = await invoke("browse_bank", { driveIndex, index: i, path: "" });
+            blockLiLabel(i, v.label, v.formatted);
+            if (i === selectedBlock) { currentPath = ""; renderDir(v); }
+          } catch (e) { /* leave the old label */ }
+        }
+      }
+      // Bulk actions on the selected blocks / from the right-clicked block.
+      async function blockBulkAction(act, idx, driveIndex) {
+        const sel = sortedSel();
+        if (act === "mcheck" || act === "check") {
+          await checkBlocks(act === "check" ? [idx] : sel);
+        } else if (act === "mformat") {
+          const list = sel.length > 8 ? sel.slice(0, 8).join(", ") + ", …" : sel.join(", ");
+          if (!confirm(t("dyn.formatManyConfirm", { n: sel.length, list }))) return;
+          const label = prompt(t("dyn.newLabelPrompt"), "NO NAME");
+          if (label === null) return;
+          setStatus($("readStatus"), t("dyn.working"));
+          try {
+            await invoke("format_blocks", { driveIndex, indices: sel, label: (label || "NO NAME").toUpperCase() });
+            await refreshBlockLabels(driveIndex, sel);
+            setStatus($("readStatus"), t("dyn.formattedN", { n: sel.length }), "ok");
+          } catch (err) { setStatus($("readStatus"), tErr(err), "err"); }
+        } else if (act === "mexport") {
+          if (!dialog || !dialog.open) { setStatus($("readStatus"), t("dyn.useDragDrop"), "err"); return; }
+          const dir = await dialog.open({ directory: true, multiple: false, title: t("dyn.exportPick") });
+          if (!dir) return;
+          setStatus($("readStatus"), t("dyn.working"));
+          try {
+            const n = await invoke("export_blocks", { driveIndex, indices: sel, dir });
+            setStatus($("readStatus"), t("dyn.exportedN", { n, dir }), "ok");
+          } catch (err) { setStatus($("readStatus"), tErr(err), "err"); }
+        } else if (act === "importmany") {
+          if (!dialog || !dialog.open) return;
+          let paths = await dialog.open({ multiple: true, title: t("dyn.importManyTitle"), filters: [{ name: "Floppy image", extensions: ["img", "ima", "vfd", "dsk", "bin"] }] });
+          if (!paths) return;
+          if (!Array.isArray(paths)) paths = [paths];
+          if (!paths.length) return;
+          const from = idx, to = idx + paths.length - 1;
+          if (!confirm(t("dyn.importManyConfirm", { n: paths.length, from, to }))) return;
+          setStatus($("readStatus"), t("dyn.working"));
+          try {
+            const blocks = await invoke("import_images", { driveIndex, start: idx, paths });
+            await refreshBlockLabels(driveIndex, blocks);
+            setStatus($("readStatus"), t("dyn.importManyDone", { n: blocks.length, from, to }), "ok");
+          } catch (err) { setStatus($("readStatus"), tErr(err), "err"); }
+        }
       }
       $("blockCtx").addEventListener("click", async (e) => {
         const act = e.target.dataset.bact;
@@ -1413,6 +1683,10 @@
         const driveIndex = selectedDrive();
         if (isNaN(driveIndex)) return;
         if (act === "open") { selectBlock(idx); return; }
+        if (["mcheck", "mformat", "mexport", "importmany", "check"].includes(act)) {
+          await blockBulkAction(act, idx, driveIndex);
+          return;
+        }
         if (act === "rename") {
           const label = prompt(t("dyn.blockLabelPrompt"), "");
           if (label === null) return;
@@ -1533,14 +1807,23 @@
             const n = String(b.index).padStart(3, "0");
             const label = b.formatted ? (b.label || t("dyn.noLabel")) : t("dyn.blank");
             const cls = b.formatted ? (b.label ? "has-label" : "") : "blank";
-            return `<li data-index="${b.index}" class="${cls}" aria-selected="false">${FLOPPY_ICO}<span class="idx">${n}</span><span class="nm">${label}</span></li>`;
+            return `<li data-index="${b.index}" class="${cls}" aria-selected="false">${FLOPPY_ICO}<span class="idx">${n}</span><span class="nm">${esc(label)}</span><span class="hdot"></span><span class="bar"><i></i></span></li>`;
           }).join("");
+          // Labels may have changed since the last check; health results are stale.
+          healthMap.clear();
+          for (const i of [...selectedBlocks]) if (i >= blocks.length) selectedBlocks.delete(i);
           list.querySelectorAll("li[data-index]").forEach((li) => {
             const idx = parseInt(li.dataset.index, 10);
-            li.addEventListener("click", () => selectBlock(idx));
-            li.addEventListener("contextmenu", (e) => { e.preventDefault(); ctxBlockIndex = idx; openBlockCtx(e.clientX, e.clientY); });
+            li.addEventListener("click", (e) => blockClick(e, idx));
+            li.addEventListener("contextmenu", (e) => {
+              e.preventDefault();
+              if (!selectedBlocks.has(idx)) { selectedBlocks.clear(); selectedBlocks.add(idx); anchorBlock = idx; paintBlockSel(); }
+              ctxBlockIndex = idx;
+              openBlockCtx(e.clientX, e.clientY);
+            });
           });
           if (selectedBlock !== null) markSelected(selectedBlock);
+          paintBlockSel();
         } catch (e) { list.innerHTML = `<li class="mini-empty">${tErr(e)}</li>`; }
       }
       $("scanBtn").addEventListener("click", scanBlocks);
@@ -1710,7 +1993,7 @@
       setLang(savedLang);
 
       // Remember form settings between sessions (per-user convenience).
-      const PERSIST = ["fmtBanks", "fmtPrefix", "fmtStart", "fmtVerify", "fmtQuick", "blockCount", "writeVerify", "bkBanks", "sfrBanks"];
+      const PERSIST = ["updAuto", "fmtBanks", "fmtPrefix", "fmtStart", "fmtVerify", "fmtQuick", "blockCount", "writeVerify", "bkBanks", "sfrBanks"];
       const store = (k, v) => { try { localStorage.setItem("fw_set_" + k, v); } catch (e) {} };
       const load = (k) => { try { return localStorage.getItem("fw_set_" + k); } catch (e) { return null; } };
       for (const id of PERSIST) {
@@ -1725,6 +2008,52 @@
       const savedSize = load("fmtSize");
       if (savedSize) { const r = document.querySelector(`input[name="fmtSize"][value="${savedSize}"]`); if (r) r.checked = true; }
       document.querySelectorAll('input[name="fmtSize"]').forEach((r) => r.addEventListener("change", () => store("fmtSize", r.value)));
+
+      // ---- Update check (GitHub Releases) ----
+      const RELEASES_API = "https://api.github.com/repos/akbulut97/floppy-workbench/releases/latest";
+      let updUrl = "https://github.com/akbulut97/floppy-workbench/releases/latest";
+      const verParts = (v) => String(v).replace(/^v/i, "").split(/[.+-]/).slice(0, 3).map((x) => parseInt(x, 10) || 0);
+      function isNewer(latest, current) {
+        const a = verParts(latest), b = verParts(current);
+        for (let i = 0; i < 3; i++) if (a[i] !== b[i]) return a[i] > b[i];
+        return false;
+      }
+      async function appVersion() {
+        try { return await window.__TAURI__.app.getVersion(); } catch (e) { return "0.0.0"; }
+      }
+      async function checkUpdates(manual) {
+        if (manual) $("updMsg").textContent = t("upd.checking");
+        try {
+          const cur = await appVersion();
+          const res = await fetch(RELEASES_API, { headers: { Accept: "application/vnd.github+json" } });
+          if (!res.ok) throw new Error("HTTP " + res.status);
+          const rel = await res.json();
+          try { localStorage.setItem("fw_upd_last", String(Date.now())); } catch (e) {}
+          if (rel.html_url) updUrl = rel.html_url;
+          if (rel.tag_name && isNewer(rel.tag_name, cur)) {
+            $("updText").textContent = t("upd.available", { v: rel.tag_name, cur: "v" + cur });
+            $("updBanner").hidden = false;
+            if (manual) $("updMsg").textContent = "";
+          } else if (manual) {
+            $("updMsg").textContent = t("upd.latest");
+          }
+        } catch (e) {
+          if (manual) $("updMsg").textContent = t("upd.failed");
+        }
+      }
+      $("updCheck").addEventListener("click", (e) => { e.stopPropagation(); checkUpdates(true); });
+      $("updDismiss").addEventListener("click", () => { $("updBanner").hidden = true; });
+      $("updGo").addEventListener("click", async () => {
+        try { await window.__TAURI__.opener.openUrl(updUrl); }
+        catch (e) { setStatus($("readStatus"), updUrl, "err"); }
+      });
+      appVersion().then((v) => { $("appVer").textContent = "v" + v; });
+      {
+        // Automatic check at most once a day, unless turned off in Settings.
+        let last = 0;
+        try { last = parseInt(localStorage.getItem("fw_upd_last") || "0", 10); } catch (e) {}
+        if ($("updAuto").checked && Date.now() - last > 24 * 3600 * 1000) setTimeout(() => checkUpdates(false), 3000);
+      }
 
       refreshSummary();
       refreshLabelPreview();

@@ -31,6 +31,12 @@ against the independent [`fatfs`](https://crates.io/crates/fatfs) crate.
   1.5 MiB bank).
 - **Copy a block** onto another block.
 - **Search** file and folder names across every block on the stick.
+- **Select several blocks** (Ctrl/Shift‑click) to format, save as `.img` or check them in one go.
+- **Load many `.img` files** into consecutive blocks at once (written in natural name order;
+  every file is checked before anything is written).
+- **Integrity check**: marks each block OK / warning / corrupt / blank (boot sector, FAT
+  consistency, every file read back), with the problems in a tooltip.
+- **List or grid view**; the grid shows how full each floppy is.
 
 ### Contents — a real file explorer
 - Two‑pane layout: the blocks on the left, the selected floppy's files on the right.
@@ -48,6 +54,8 @@ against the independent [`fatfs`](https://crates.io/crates/fatfs) crate.
 ### Convenience
 - USB sticks are **detected automatically** when plugged in or removed.
 - Remembers the last device, format settings and tab. English / Turkish UI.
+- Tells you when a new version is published (checks GitHub Releases at most once a day;
+  can be turned off in Settings).
 
 ### CLI (`floppyctl`)
 ```sh
@@ -57,6 +65,14 @@ floppyctl build-usb --out usb.img --banks 100 --bank 0:1.44:BOOTDISK --add-to 0:
 floppyctl list-usb
 floppyctl read-bank --drive 3 --index 0        # or --image usb.img --index 0
 floppyctl write-usb --image usb.img --index <IDX> --yes   # destructive
+
+# Block commands work on a stick (--drive N) or on a raw USB image file (--image usb.img)
+floppyctl check        --drive 3 --count 100            # exit code 2 if a block is corrupt
+floppyctl search       --drive 3 report
+floppyctl export-banks --drive 3 --from 0 --count 10 --out-dir backup/
+floppyctl import-banks --drive 3 --start 20 --yes backup/*.img
+floppyctl clone-bank   --drive 3 --from 0 --to 5 --yes
+floppyctl format-banks --drive 3 --from 10 --count 5 --label WORK --yes [--freedos]
 ```
 
 ---

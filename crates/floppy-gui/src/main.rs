@@ -2,8 +2,10 @@
 #![cfg_attr(not(debug_assertions), windows_subsystem = "windows")]
 
 use floppyctl::blockset::BlockSet;
+use floppyctl::bulk;
 use floppyctl::device::{self, UsbDrive};
 use floppyctl::sfr::{build_usb_image, BankSpec, BANK_STRIDE};
+use floppyctl::store::{BankStore, DriveStore};
 use floppyctl::{build_image, parse_format, parse_naming, BankFile};
 use serde::{Deserialize, Serialize};
 use tauri::Emitter;
@@ -560,58 +562,6 @@ fn format_one_block(drive_index: u32, index: u32, label: String) -> Result<(), S
     device::write_bank(&drive, index, &img).map_err(|e| e.to_string())
 }
 
-/// One search hit across blocks.
-#[derive(Serialize)]
-struct SearchHit {
-    block: u32,
-    path: String,
-    name: String,
-    size: u64,
-    is_dir: bool,
-}
-
-/// Search file/folder names in the first `count` blocks (case-insensitive).
-#[tauri::command]
-fn search_blocks(
-    window: tauri::Window,
-    drive_index: u32,
-    count: u32,
-    query: String,
-) -> Result<Vec<SearchHit>, String> {
-    let query = query.trim().to_string();
-    if query.is_empty() {
-        return Ok(vec![]);
-    }
-    let drive = find_drive(drive_index)?;
-    let max_banks = (drive.size_bytes / BANK_STRIDE as u64) as u32;
-    let count = count.min(max_banks);
-    let raw = device::read_range(&drive, count as usize * BANK_STRIDE, |done, total| {
-        emit_progress(&window, "read", done, total);
-    })
-    .map_err(|e| e.to_string())?;
-    emit_progress(&window, "done", 0, 0);
-
-    let mut hits = Vec::new();
-    for block in 0..count {
-        let Ok(img) = floppyctl::sfr::extract_bank(&raw, block) else {
-            break;
-        };
-        if floppyctl::inspect(img).is_err() {
-            continue; // blank or non-FAT block
-        }
-        for (path, e) in floppyctl::fsops::find_entries(img, &query).unwrap_or_default() {
-            hits.push(SearchHit {
-                block,
-                path,
-                name: e.name,
-                size: e.size,
-                is_dir: e.is_dir,
-            });
-        }
-    }
-    Ok(hits)
-}
-
 /// Save one block as a 1.44 MB floppy image file.
 #[tauri::command]
 fn export_bank(drive_index: u32, index: u32, dest: String) -> Result<String, String> {
@@ -631,15 +581,121 @@ fn import_bank(drive_index: u32, index: u32, path: String) -> Result<(), String>
     device::write_bank(&drive, index, img).map_err(|e| e.to_string())
 }
 
+/// The selected USB stick as a bank store.
+fn drive_store(drive_index: u32) -> Result<DriveStore, String> {
+    Ok(DriveStore(find_drive(drive_index)?))
+}
+
+/// A progress callback that drives the UI progress bar with `phase`.
+fn progress_to<'a>(window: &'a tauri::Window, phase: &'a str) -> impl Fn(u64, u64) + 'a {
+    move |done, total| emit_progress(window, phase, done, total)
+}
+
 /// Copy block `src` onto block `dst` byte for byte (verified). DESTRUCTIVE for `dst`.
 #[tauri::command]
 fn clone_bank(drive_index: u32, src: u32, dst: u32) -> Result<(), String> {
-    if src == dst {
-        return Err("source and target block are the same".into());
+    let store = drive_store(drive_index)?;
+    bulk::clone_bank(&store, src, dst).map_err(|e| e.to_string())
+}
+
+/// Search file/folder names in the first `count` blocks (case-insensitive).
+#[tauri::command]
+fn search_blocks(
+    window: tauri::Window,
+    drive_index: u32,
+    count: u32,
+    query: String,
+) -> Result<Vec<bulk::SearchHit>, String> {
+    let store = drive_store(drive_index)?;
+    let hits = bulk::search_banks(&store, count, &query, &progress_to(&window, "read"));
+    emit_progress(&window, "done", 0, 0);
+    hits.map_err(|e| e.to_string())
+}
+
+/// Integrity report for one block.
+#[derive(Serialize)]
+struct BlockHealth {
+    index: u32,
+    #[serde(flatten)]
+    report: floppyctl::health::HealthReport,
+}
+
+/// Check the integrity of the given blocks (blank / ok / warning / corrupt).
+#[tauri::command]
+fn check_blocks(
+    window: tauri::Window,
+    drive_index: u32,
+    indices: Vec<u32>,
+) -> Result<Vec<BlockHealth>, String> {
+    let store = drive_store(drive_index)?;
+    let max = store.bank_count();
+    let indices: Vec<u32> = indices.into_iter().filter(|&i| i < max).collect();
+    let res = bulk::check_banks(&store, &indices, &progress_to(&window, "read"));
+    emit_progress(&window, "done", 0, 0);
+    Ok(res
+        .map_err(|e| e.to_string())?
+        .into_iter()
+        .map(|(index, report)| BlockHealth { index, report })
+        .collect())
+}
+
+/// Save the given blocks as BLOCKnnn.img files in folder `dir`. Returns the count.
+#[tauri::command]
+fn export_blocks(
+    window: tauri::Window,
+    drive_index: u32,
+    indices: Vec<u32>,
+    dir: String,
+) -> Result<usize, String> {
+    let store = drive_store(drive_index)?;
+    let res = bulk::export_banks(
+        &store,
+        &indices,
+        std::path::Path::new(&dir),
+        &progress_to(&window, "read"),
+    );
+    emit_progress(&window, "done", 0, 0);
+    res.map(|v| v.len()).map_err(|e| e.to_string())
+}
+
+/// Write image files into consecutive blocks from `start` (natural name order).
+/// Every file is checked before anything is written. Returns the blocks written.
+/// DESTRUCTIVE.
+#[tauri::command]
+fn import_images(
+    window: tauri::Window,
+    drive_index: u32,
+    start: u32,
+    paths: Vec<String>,
+) -> Result<Vec<u32>, String> {
+    let store = drive_store(drive_index)?;
+    let mut paths: Vec<std::path::PathBuf> = paths.into_iter().map(Into::into).collect();
+    let res = bulk::import_images(&store, start, &mut paths, &progress_to(&window, "write"));
+    emit_progress(&window, "done", 0, 0);
+    res.map_err(|e| format!("{e:#}"))
+}
+
+/// Quick-format the given blocks as blank 1.44M floppies with `label`. DESTRUCTIVE.
+#[tauri::command]
+fn format_blocks(
+    window: tauri::Window,
+    drive_index: u32,
+    indices: Vec<u32>,
+    label: String,
+) -> Result<(), String> {
+    let store = drive_store(drive_index)?;
+    let img =
+        build_image(fat12::FloppyFormat::F1_44M, &label, 0, &[]).map_err(|e| e.to_string())?;
+    let total = indices.len() as u64;
+    for (n, &i) in indices.iter().enumerate() {
+        if let Err(e) = store.write_bank(i, &img) {
+            emit_progress(&window, "done", 0, 0);
+            return Err(e.to_string());
+        }
+        emit_progress(&window, "write", n as u64 + 1, total);
     }
-    let drive = find_drive(drive_index)?;
-    let img = device::read_bank(&drive, src).map_err(|e| e.to_string())?;
-    device::write_bank(&drive, dst, &img).map_err(|e| e.to_string())
+    emit_progress(&window, "done", 0, 0);
+    Ok(())
 }
 
 /// Read a whole-USB write back and compare it, reporting "verify" progress.
@@ -716,6 +772,7 @@ fn is_elevated() -> bool {
 fn main() {
     tauri::Builder::default()
         .plugin(tauri_plugin_dialog::init())
+        .plugin(tauri_plugin_opener::init())
         .setup(|app| {
             // Watch for USB sticks being plugged in/removed (cheap poll), and tell
             // the UI to rescan only when something actually changed.
@@ -760,7 +817,11 @@ fn main() {
             export_bank,
             import_bank,
             clone_bank,
-            search_blocks
+            search_blocks,
+            check_blocks,
+            export_blocks,
+            import_images,
+            format_blocks
         ])
         .run(tauri::generate_context!())
         .expect("error while running tauri application");

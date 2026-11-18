@@ -2,11 +2,14 @@
 //! file IO so it can be unit-tested.
 
 pub mod blockset;
+pub mod bulk;
 pub mod clipboard;
 pub mod device;
 pub mod freedos;
 pub mod fsops;
+pub mod health;
 pub mod sfr;
+pub mod store;
 
 use std::io::Cursor;
 

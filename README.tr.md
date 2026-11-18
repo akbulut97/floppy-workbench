@@ -30,6 +30,13 @@ formatlar; saklanan disketleri bir dosya‑gezgini arayüzüyle gözatıp düzen
   1.5 MiB banka).
 - Bir bloğu başka bir bloğa **kopyala**.
 - USB'deki tüm bloklarda dosya ve klasör adlarında **ara**.
+- **Birden çok blok seç** (Ctrl/Shift‑tık); tek seferde formatla, `.img` olarak kaydet veya
+  kontrol et.
+- **Çok sayıda `.img` dosyasını** ardışık bloklara bir kerede yükle (doğal ad sırasıyla
+  yazılır; hiçbir şey yazılmadan önce tüm dosyalar kontrol edilir).
+- **Bütünlük kontrolü**: her bloğu sağlam / uyarı / bozuk / boş olarak işaretler (boot
+  sektörü, FAT tutarlılığı, her dosyanın geri okunması); sorunlar ipucunda görünür.
+- **Liste veya ızgara görünümü**; ızgara her disketin doluluğunu gösterir.
 
 ### İçerik (Contents) — gerçek bir dosya gezgini
 - İki panel: solda bloklar, sağda seçili disketin dosyaları.
@@ -47,6 +54,8 @@ formatlar; saklanan disketleri bir dosya‑gezgini arayüzüyle gözatıp düzen
 ### Kolaylıklar
 - USB bellek takıldığında / çıkarıldığında **otomatik algılanır**.
 - Son cihazı, format ayarlarını ve sekmeyi hatırlar. İngilizce / Türkçe arayüz.
+- Yeni sürüm yayımlandığında haber verir (GitHub Releases'ı günde en fazla bir kez kontrol
+  eder; Ayarlar'dan kapatılabilir).
 
 ### CLI (`floppyctl`)
 ```sh
@@ -56,6 +65,14 @@ floppyctl build-usb --out usb.img --banks 100 --bank 0:1.44:BOOTDISK --add-to 0:
 floppyctl list-usb
 floppyctl read-bank --drive 3 --index 0        # veya --image usb.img --index 0
 floppyctl write-usb --image usb.img --index <IDX> --yes   # yıkıcı
+
+# Blok komutları USB bellekte (--drive N) veya ham USB imaj dosyasında (--image usb.img) çalışır
+floppyctl check        --drive 3 --count 100            # bozuk blok varsa çıkış kodu 2
+floppyctl search       --drive 3 rapor
+floppyctl export-banks --drive 3 --from 0 --count 10 --out-dir yedek/
+floppyctl import-banks --drive 3 --start 20 --yes yedek/*.img
+floppyctl clone-bank   --drive 3 --from 0 --to 5 --yes
+floppyctl format-banks --drive 3 --from 10 --count 5 --label WORK --yes [--freedos]
 ```
 
 ---

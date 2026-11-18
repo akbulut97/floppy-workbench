@@ -6,7 +6,9 @@ use anyhow::{Context, Result};
 use clap::{Parser, Subcommand};
 
 use floppyctl::blockset::BlockSet;
+use floppyctl::health::Health;
 use floppyctl::sfr::{build_usb_image, BANK_STRIDE};
+use floppyctl::store::{open_store, BankStore};
 use floppyctl::{
     attach_file, build_image, inspect, parse_add_spec, parse_bank_spec, parse_format, parse_naming,
 };
@@ -16,6 +18,40 @@ use floppyctl::{
 struct Cli {
     #[command(subcommand)]
     command: Command,
+}
+
+/// Where the blocks are: a physical USB stick or a raw USB image file.
+#[derive(clap::Args)]
+struct Source {
+    /// Physical drive index (from `list-usb`).
+    #[arg(long)]
+    drive: Option<u32>,
+    /// Or a raw USB image file (e.g. from `build-usb` or a backup); edited in place.
+    #[arg(long)]
+    image: Option<PathBuf>,
+}
+
+impl Source {
+    fn open(&self) -> Result<Box<dyn BankStore>> {
+        open_store(self.drive, self.image.as_deref())
+    }
+}
+
+/// Print a one-line percentage progress indicator.
+fn progress(label: &'static str) -> impl Fn(u64, u64) {
+    move |done, total| {
+        eprint!("\r  {label} {:>3}%", done * 100 / total.max(1));
+        if done >= total {
+            eprintln!();
+        }
+    }
+}
+
+fn require_yes(yes: bool) -> Result<()> {
+    if !yes {
+        anyhow::bail!("this overwrites blocks; re-run with --yes to confirm");
+    }
+    Ok(())
 }
 
 #[derive(Subcommand)]
@@ -99,6 +135,92 @@ enum Command {
     },
     /// List removable/USB drives detected on this machine.
     ListUsb,
+    /// Save blocks as BLOCKnnn.img files (from a device or a USB image file).
+    ExportBanks {
+        #[command(flatten)]
+        src: Source,
+        /// First block to save.
+        #[arg(long, default_value_t = 0)]
+        from: u32,
+        /// Number of blocks to save.
+        #[arg(long, default_value_t = 1)]
+        count: u32,
+        /// Output folder.
+        #[arg(long)]
+        out_dir: PathBuf,
+    },
+    /// Write .img files into consecutive blocks (natural file-name order). DESTRUCTIVE.
+    ImportBanks {
+        #[command(flatten)]
+        src: Source,
+        /// Block that receives the first image.
+        #[arg(long, default_value_t = 0)]
+        start: u32,
+        /// Floppy image files (1.44 MB, or 1.5 MiB bank dumps).
+        #[arg(required = true)]
+        files: Vec<PathBuf>,
+        /// Required confirmation; without it the command refuses to write.
+        #[arg(long)]
+        yes: bool,
+    },
+    /// Copy one block onto another. DESTRUCTIVE for the target block.
+    CloneBank {
+        #[command(flatten)]
+        src: Source,
+        /// Source block.
+        #[arg(long)]
+        from: u32,
+        /// Target block (overwritten).
+        #[arg(long)]
+        to: u32,
+        /// Required confirmation.
+        #[arg(long)]
+        yes: bool,
+    },
+    /// Quick-format blocks as blank 1.44 MB floppies (optionally FreeDOS-bootable). DESTRUCTIVE.
+    FormatBanks {
+        #[command(flatten)]
+        src: Source,
+        /// First block to format.
+        #[arg(long)]
+        from: u32,
+        /// Number of blocks.
+        #[arg(long, default_value_t = 1)]
+        count: u32,
+        /// Volume label.
+        #[arg(long, default_value = "NO NAME")]
+        label: String,
+        /// Make the blocks bootable with FreeDOS.
+        #[arg(long)]
+        freedos: bool,
+        /// Required confirmation.
+        #[arg(long)]
+        yes: bool,
+    },
+    /// Find files/folders by name (case-insensitive) across blocks.
+    Search {
+        #[command(flatten)]
+        src: Source,
+        /// Number of blocks to search (from block 0).
+        #[arg(long, default_value_t = 100)]
+        banks: u32,
+        /// Text to look for in names.
+        query: String,
+    },
+    /// Check block integrity (blank / ok / warning / corrupt). Exits with 2 if any block is corrupt.
+    Check {
+        #[command(flatten)]
+        src: Source,
+        /// First block to check.
+        #[arg(long, default_value_t = 0)]
+        from: u32,
+        /// Number of blocks to check.
+        #[arg(long, default_value_t = 100)]
+        count: u32,
+        /// Also list blank blocks.
+        #[arg(long)]
+        all: bool,
+    },
     /// Write a raw image file directly to a removable USB drive. DESTRUCTIVE.
     WriteUsb {
         /// Raw image file to write.
@@ -307,6 +429,117 @@ fn main() -> Result<()> {
             })?;
             println!();
             println!("Done. Safely eject the drive before removing it.");
+        }
+        Command::ExportBanks {
+            src,
+            from,
+            count,
+            out_dir,
+        } => {
+            let store = src.open()?;
+            let indices: Vec<u32> = (from..from + count).collect();
+            let files =
+                floppyctl::bulk::export_banks(&*store, &indices, &out_dir, &progress("saving"))?;
+            println!("Saved {} block(s) to {}", files.len(), out_dir.display());
+        }
+        Command::ImportBanks {
+            src,
+            start,
+            mut files,
+            yes,
+        } => {
+            require_yes(yes)?;
+            let store = src.open()?;
+            let blocks =
+                floppyctl::bulk::import_images(&*store, start, &mut files, &progress("writing"))?;
+            for (f, b) in files.iter().zip(&blocks) {
+                println!("  {:03} <- {}", b, f.display());
+            }
+            println!("Wrote and verified {} block(s).", blocks.len());
+        }
+        Command::CloneBank { src, from, to, yes } => {
+            require_yes(yes)?;
+            let store = src.open()?;
+            floppyctl::bulk::clone_bank(&*store, from, to)?;
+            println!("Copied block {from} to block {to} (verified).");
+        }
+        Command::FormatBanks {
+            src,
+            from,
+            count,
+            label,
+            freedos,
+            yes,
+        } => {
+            require_yes(yes)?;
+            let store = src.open()?;
+            let label = label.to_uppercase();
+            let img = if freedos {
+                floppyctl::freedos::make_bootable_image(&label, 0)?
+            } else {
+                build_image(fat12::FloppyFormat::F1_44M, &label, 0, &[])?
+            };
+            let p = progress("formatting");
+            for (n, i) in (from..from + count).enumerate() {
+                store.write_bank(i, &img)?;
+                p(n as u64 + 1, count as u64);
+            }
+            println!("Formatted blocks {from}–{} as '{label}'.", from + count - 1);
+        }
+        Command::Search { src, banks, query } => {
+            let store = src.open()?;
+            let hits = floppyctl::bulk::search_banks(&*store, banks, &query, &progress("reading"))?;
+            if hits.is_empty() {
+                println!("No matches for '{query}'.");
+            }
+            for h in &hits {
+                let size = if h.is_dir {
+                    "<DIR>".to_string()
+                } else {
+                    h.size.to_string()
+                };
+                println!("  {:03}  {:>10}  {}", h.block, size, h.path);
+            }
+        }
+        Command::Check {
+            src,
+            from,
+            count,
+            all,
+        } => {
+            let store = src.open()?;
+            let count = count.min(store.bank_count().saturating_sub(from));
+            let indices: Vec<u32> = (from..from + count).collect();
+            let reports = floppyctl::bulk::check_banks(&*store, &indices, &progress("reading"))?;
+            let mut tally = [0u32; 4];
+            for (i, r) in &reports {
+                tally[r.status as usize] += 1;
+                if r.status == Health::Blank && !all {
+                    continue;
+                }
+                let status = format!("{:?}", r.status).to_uppercase();
+                println!(
+                    "  {i:03}  {status:<8} {:<11}  {:>4} file(s)  {:>7} / {} KB",
+                    r.label,
+                    r.files,
+                    r.used_bytes / 1024,
+                    r.total_bytes / 1024
+                );
+                for issue in &r.issues {
+                    println!("         - {issue}");
+                }
+            }
+            println!(
+                "{} checked: {} ok, {} warning, {} corrupt, {} blank",
+                reports.len(),
+                tally[Health::Ok as usize],
+                tally[Health::Warning as usize],
+                tally[Health::Corrupt as usize],
+                tally[Health::Blank as usize]
+            );
+            if tally[Health::Corrupt as usize] > 0 {
+                std::process::exit(2);
+            }
         }
     }
     Ok(())

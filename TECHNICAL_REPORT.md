@@ -218,14 +218,14 @@ Status as of the current Floppy Workbench release:
 **Device**
 - [x] Detect and select the USB floppy emulator device (removable drives only; re-scans automatically on plug/unplug)
 - [x] Count/list blocks (1–100), read metadata (label, used/free space)
-- [ ] 4 view modes + refresh: refresh is done; a single list view replaces the 4 view modes
-- [x] Search file names across all blocks (extra)
+- [x] View modes + refresh: list and grid views (the grid shows usage), instead of the original 4 modes
+- [x] Search file names across all blocks; integrity check of every block (extra)
 
 **Format**
 - [x] Split the USB into N blocks (full format)
 - [x] Single-block format (720K / 1.2M / 1.44M, FAT12)
 - [x] Quick format
-- [x] Bulk format: done as **format a range** of blocks, not as free multi-select
+- [x] Bulk (multi-select) format: Ctrl/Shift-click blocks, or format a range
 - [x] Create bootable DOS floppies (FreeDOS)
 - [x] Confirmation dialog for destructive operations
 - [x] Remember the last format setting (plus device, tab and language)
@@ -234,7 +234,7 @@ Status as of the current Floppy Workbench release:
 - [x] Upload files to a block / download files from a block (full file explorer: folders, cut/copy/paste, rename, preview)
 - [x] Write a `.img` to a block / save a block as `.img`
 - [x] Copy a block onto another block (extra)
-- [ ] Bulk write/save of several separate `.img` files: partly covered by range backup/restore
+- [x] Bulk write/save: load many `.img` files into consecutive blocks; save the selected blocks as `BLOCKnnn.img`
 - [x] Back up / restore the whole USB (or its first N banks)
 - [x] Read-back verification after every write (extra)
 
