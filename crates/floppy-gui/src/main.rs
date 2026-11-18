@@ -697,7 +697,8 @@ fn make_bank_bootable(drive_index: u32, index: u32, label: String) -> Result<(),
 /// Explorer→app drag-and-drop is blocked by Windows while elevated.
 #[tauri::command]
 fn is_elevated() -> bool {
-    floppyctl::device::is_elevated()
+    // The Explorer drag-and-drop block (UIPI) is Windows-only.
+    cfg!(windows) && floppyctl::device::is_elevated()
 }
 
 fn main() {

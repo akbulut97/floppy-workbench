@@ -1,0 +1,56 @@
+name: Release
+
+# Push a tag like v0.1.0 to build the installers for Windows, Linux and macOS
+# and attach them to a draft GitHub Release (publish it by hand when ready).
+on:
+  push:
+    tags: ["v*"]
+
+permissions:
+  contents: write
+
+jobs:
+  bundle:
+    name: ${{ matrix.os }}
+    runs-on: ${{ matrix.os }}
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - os: windows-latest
+            bundles: nsis,msi
+          - os: ubuntu-22.04
+            bundles: appimage,deb
+          - os: macos-latest
+            bundles: app,dmg
+    steps:
+      - uses: actions/checkout@v5
+      - name: Linux GUI dependencies
+        if: runner.os == 'Linux'
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y libwebkit2gtk-4.1-dev libappindicator3-dev librsvg2-dev patchelf
+      - uses: dtolnay/rust-toolchain@stable
+      - uses: Swatinem/rust-cache@v2
+      - uses: actions/setup-node@v5
+        with:
+          node-version: 22
+      - uses: tauri-apps/tauri-action@v0
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        with:
+          projectPath: crates/floppy-gui
+          tauriScript: npx --yes @tauri-apps/cli@2.12.6
+          args: --bundles ${{ matrix.bundles }}
+          tagName: ${{ github.ref_name }}
+          releaseName: Floppy Workbench ${{ github.ref_name }}
+          releaseBody: |
+            Installers for Floppy Workbench ${{ github.ref_name }}.
+
+            - **Windows:** run the `-setup.exe` (or the `.msi`). The app asks for Administrator rights, which raw USB access needs.
+            - **Linux:** `.AppImage` or `.deb`. Raw USB access needs root (or membership in the `disk` group).
+            - **macOS:** `.dmg`. Raw USB access needs root.
+
+            The installers are not code-signed yet, so Windows SmartScreen / macOS Gatekeeper will warn on first launch.
+          releaseDraft: true
+          prerelease: false
