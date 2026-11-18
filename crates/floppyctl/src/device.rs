@@ -48,7 +48,9 @@ pub fn check_write_target(drive: &UsbDrive, image_len: u64) -> Result<()> {
 #[cfg(windows)]
 pub fn is_elevated() -> bool {
     use windows::Win32::Foundation::{CloseHandle, HANDLE};
-    use windows::Win32::Security::{GetTokenInformation, TokenElevation, TOKEN_ELEVATION, TOKEN_QUERY};
+    use windows::Win32::Security::{
+        GetTokenInformation, TokenElevation, TOKEN_ELEVATION, TOKEN_QUERY,
+    };
     use windows::Win32::System::Threading::{GetCurrentProcess, OpenProcessToken};
     unsafe {
         let mut token = HANDLE::default();
@@ -71,7 +73,7 @@ pub fn is_elevated() -> bool {
 
 #[cfg(not(windows))]
 pub fn is_elevated() -> bool {
-    false
+    nix::is_root()
 }
 
 /// Write `data` to the selected removable drive, starting at sector 0. **Destructive.**
@@ -173,7 +175,7 @@ pub fn list_usb_drives() -> Result<Vec<UsbDrive>> {
 
 #[cfg(not(windows))]
 pub fn list_usb_drives() -> Result<Vec<UsbDrive>> {
-    bail!("drive enumeration is currently only implemented on Windows")
+    nix::list_usb_drives()
 }
 
 /// Read the 1.44MB FAT12 image of bank `index` directly from the drive.
@@ -212,8 +214,13 @@ pub fn read_bank(drive: &UsbDrive, index: u32) -> Result<Vec<u8>> {
 }
 
 #[cfg(not(windows))]
-pub fn read_bank(_drive: &UsbDrive, _index: u32) -> Result<Vec<u8>> {
-    bail!("raw device reading is currently only implemented on Windows")
+pub fn read_bank(drive: &UsbDrive, index: u32) -> Result<Vec<u8>> {
+    nix::read_at(
+        &drive.path,
+        bank_offset(index) as u64,
+        FLOPPY_IMAGE_BYTES,
+        |_, _| {},
+    )
 }
 
 /// Read `len` bytes from the start of the drive (for backing up the USB).
@@ -229,7 +236,13 @@ pub fn read_range(drive: &UsbDrive, len: usize, on_progress: impl Fn(u64, u64)) 
         while pos < len {
             let want = (len - pos).min(1024 * 1024);
             let mut read = 0u32;
-            if ReadFile(handle, Some(&mut buf[pos..pos + want]), Some(&mut read), None).is_err()
+            if ReadFile(
+                handle,
+                Some(&mut buf[pos..pos + want]),
+                Some(&mut read),
+                None,
+            )
+            .is_err()
                 || read == 0
             {
                 let _ = CloseHandle(handle);
@@ -244,8 +257,8 @@ pub fn read_range(drive: &UsbDrive, len: usize, on_progress: impl Fn(u64, u64)) 
 }
 
 #[cfg(not(windows))]
-pub fn read_range(_drive: &UsbDrive, _len: usize, _on_progress: impl Fn(u64, u64)) -> Result<Vec<u8>> {
-    bail!("raw device reading is currently only implemented on Windows")
+pub fn read_range(drive: &UsbDrive, len: usize, on_progress: impl Fn(u64, u64)) -> Result<Vec<u8>> {
+    nix::read_at(&drive.path, 0, len, on_progress)
 }
 
 /// Read the first 512 bytes (boot sector) of each of the first `count` banks,
@@ -276,8 +289,15 @@ pub fn read_bank_headers(drive: &UsbDrive, count: u32) -> Result<Vec<Vec<u8>>> {
 }
 
 #[cfg(not(windows))]
-pub fn read_bank_headers(_drive: &UsbDrive, _count: u32) -> Result<Vec<Vec<u8>>> {
-    bail!("raw device reading is currently only implemented on Windows")
+pub fn read_bank_headers(drive: &UsbDrive, count: u32) -> Result<Vec<Vec<u8>>> {
+    let mut out = Vec::new();
+    for i in 0..count {
+        match nix::read_at(&drive.path, bank_offset(i) as u64, 512, |_, _| {}) {
+            Ok(h) => out.push(h),
+            Err(_) => break, // end of device
+        }
+    }
+    Ok(out)
 }
 
 /// Write `data` to `drive` starting at `offset`, locking the disk's volumes first.
@@ -303,7 +323,10 @@ fn write_at(
         if !win::device_number(disk)?.is_some_and(|n| n == drive.index) {
             let _ = CloseHandle(disk);
             win::close_all(volumes);
-            bail!("safety check failed: opened device is not drive {}", drive.index);
+            bail!(
+                "safety check failed: opened device is not drive {}",
+                drive.index
+            );
         }
 
         let result = (|| {
@@ -328,8 +351,13 @@ fn write_at(
 }
 
 #[cfg(not(windows))]
-fn write_at(_drive: &UsbDrive, _offset: u64, _data: &[u8], _on_progress: impl Fn(u64, u64)) -> Result<()> {
-    bail!("raw device writing is currently only implemented on Windows")
+fn write_at(
+    drive: &UsbDrive,
+    offset: u64,
+    data: &[u8],
+    on_progress: impl Fn(u64, u64),
+) -> Result<()> {
+    nix::write_at(drive, offset, data, on_progress)
 }
 
 #[cfg(windows)]
@@ -404,5 +432,253 @@ mod win {
         for h in handles {
             let _ = CloseHandle(h);
         }
+    }
+}
+
+// ----------------------------------------------------------------------------
+// Pure helpers used by the Linux/macOS backend (kept platform-independent so
+// they are unit-tested everywhere).
+// ----------------------------------------------------------------------------
+
+/// True if `dev` is `disk` itself or one of its partitions
+/// (`/dev/sdb` → `/dev/sdb1`, `/dev/mmcblk0` → `/dev/mmcblk0p1`).
+#[cfg_attr(not(target_os = "linux"), allow(dead_code))]
+pub(crate) fn is_partition_of(dev: &str, disk: &str) -> bool {
+    if dev == disk {
+        return true;
+    }
+    match dev.strip_prefix(disk) {
+        Some(rest) => {
+            let rest = rest.strip_prefix('p').unwrap_or(rest);
+            !rest.is_empty() && rest.bytes().all(|b| b.is_ascii_digit())
+        }
+        None => false,
+    }
+}
+
+/// Byte size from `diskutil info` output ("Disk Size: 15.4 GB (15376318464 Bytes) …").
+#[cfg_attr(not(target_os = "macos"), allow(dead_code))]
+pub(crate) fn parse_diskutil_bytes(info: &str) -> u64 {
+    info.lines()
+        .map(str::trim)
+        .find(|l| l.starts_with("Disk Size") || l.starts_with("Total Size"))
+        .and_then(|l| l.split('(').nth(1))
+        .and_then(|s| s.split_whitespace().next())
+        .and_then(|s| s.parse().ok())
+        .unwrap_or(0)
+}
+
+// ----------------------------------------------------------------------------
+// Linux / macOS implementation
+// ----------------------------------------------------------------------------
+
+#[cfg(not(windows))]
+mod nix {
+    use std::fs::{File, OpenOptions};
+    use std::io::{Read, Seek, SeekFrom, Write};
+    use std::process::Command;
+
+    use anyhow::{bail, Context, Result};
+
+    use super::UsbDrive;
+
+    pub fn is_root() -> bool {
+        Command::new("id")
+            .arg("-u")
+            .output()
+            .map(|o| String::from_utf8_lossy(&o.stdout).trim() == "0")
+            .unwrap_or(false)
+    }
+
+    pub fn read_at(
+        path: &str,
+        offset: u64,
+        len: usize,
+        on_progress: impl Fn(u64, u64),
+    ) -> Result<Vec<u8>> {
+        let mut f = File::open(path).with_context(|| format!("opening {path} (run as root?)"))?;
+        f.seek(SeekFrom::Start(offset))?;
+        let mut buf = vec![0u8; len];
+        let mut pos = 0usize;
+        while pos < len {
+            let want = (len - pos).min(1024 * 1024);
+            let n = f.read(&mut buf[pos..pos + want])?;
+            if n == 0 {
+                bail!("short read: {pos} of {len} bytes");
+            }
+            pos += n;
+            on_progress(pos as u64, len as u64);
+        }
+        Ok(buf)
+    }
+
+    pub fn write_at(
+        drive: &UsbDrive,
+        offset: u64,
+        data: &[u8],
+        on_progress: impl Fn(u64, u64),
+    ) -> Result<()> {
+        if !data.len().is_multiple_of(512) {
+            bail!("image size {} is not a multiple of 512", data.len());
+        }
+        // Re-verify right before writing that the path is still a removable drive.
+        if !list_usb_drives()?.iter().any(|d| d.path == drive.path) {
+            bail!(
+                "safety check failed: {} is no longer a removable drive",
+                drive.path
+            );
+        }
+        unmount(drive)?;
+        let mut f = OpenOptions::new()
+            .read(true)
+            .write(true)
+            .open(&drive.path)
+            .with_context(|| format!("opening {} for writing (run as root?)", drive.path))?;
+        f.seek(SeekFrom::Start(offset))?;
+        let total = data.len() as u64;
+        let mut done = 0u64;
+        for chunk in data.chunks(1024 * 1024) {
+            f.write_all(chunk)?;
+            done += chunk.len() as u64;
+            on_progress(done, total);
+        }
+        f.sync_all()?;
+        Ok(())
+    }
+
+    /// Linux: removable / USB block devices from sysfs.
+    #[cfg(target_os = "linux")]
+    pub fn list_usb_drives() -> Result<Vec<UsbDrive>> {
+        let mut names: Vec<String> = std::fs::read_dir("/sys/block")?
+            .filter_map(|e| e.ok())
+            .map(|e| e.file_name().to_string_lossy().into_owned())
+            .collect();
+        names.sort();
+        let mut out = Vec::new();
+        for (i, name) in names.iter().enumerate() {
+            let base = format!("/sys/block/{name}");
+            let read = |p: &str| {
+                std::fs::read_to_string(format!("{base}/{p}"))
+                    .unwrap_or_default()
+                    .trim()
+                    .to_string()
+            };
+            let removable = read("removable") == "1";
+            let usb = std::fs::canonicalize(format!("{base}/device"))
+                .map(|p| p.to_string_lossy().contains("/usb"))
+                .unwrap_or(false);
+            let sectors: u64 = read("size").parse().unwrap_or(0); // always 512-byte units
+            if !(removable || usb) || sectors == 0 {
+                continue;
+            }
+            let model = format!("{} {}", read("device/vendor"), read("device/model"))
+                .trim()
+                .to_string();
+            out.push(UsbDrive {
+                index: i as u32,
+                path: format!("/dev/{name}"),
+                model,
+                size_bytes: sectors * 512,
+                removable: true,
+            });
+        }
+        Ok(out)
+    }
+
+    #[cfg(target_os = "linux")]
+    fn unmount(drive: &UsbDrive) -> Result<()> {
+        let mounts = std::fs::read_to_string("/proc/mounts").unwrap_or_default();
+        for dev in mounts.lines().filter_map(|l| l.split_whitespace().next()) {
+            if super::is_partition_of(dev, &drive.path) {
+                let ok = Command::new("umount").arg(dev).status()?.success();
+                if !ok {
+                    bail!("could not unmount {dev}");
+                }
+            }
+        }
+        Ok(())
+    }
+
+    /// macOS: external physical disks from `diskutil`; raw I/O via /dev/rdiskN.
+    #[cfg(target_os = "macos")]
+    pub fn list_usb_drives() -> Result<Vec<UsbDrive>> {
+        let out = Command::new("diskutil")
+            .args(["list", "external", "physical"])
+            .output()?;
+        let text = String::from_utf8_lossy(&out.stdout);
+        let mut drives = Vec::new();
+        for line in text.lines() {
+            let Some(dev) = line.split_whitespace().next() else {
+                continue;
+            };
+            let Some(n) = dev
+                .strip_prefix("/dev/disk")
+                .and_then(|s| s.parse::<u32>().ok())
+            else {
+                continue;
+            };
+            let info = Command::new("diskutil").args(["info", dev]).output()?;
+            let info = String::from_utf8_lossy(&info.stdout);
+            let model = info
+                .lines()
+                .map(str::trim)
+                .find_map(|l| l.strip_prefix("Device / Media Name:"))
+                .unwrap_or("")
+                .trim()
+                .to_string();
+            drives.push(UsbDrive {
+                index: n,
+                path: format!("/dev/rdisk{n}"),
+                model,
+                size_bytes: super::parse_diskutil_bytes(&info),
+                removable: true,
+            });
+        }
+        Ok(drives)
+    }
+
+    #[cfg(target_os = "macos")]
+    fn unmount(drive: &UsbDrive) -> Result<()> {
+        let disk = drive.path.replace("/dev/rdisk", "/dev/disk");
+        let ok = Command::new("diskutil")
+            .args(["unmountDisk", &disk])
+            .status()?
+            .success();
+        if !ok {
+            bail!("could not unmount {disk}");
+        }
+        Ok(())
+    }
+
+    #[cfg(not(any(target_os = "linux", target_os = "macos")))]
+    pub fn list_usb_drives() -> Result<Vec<UsbDrive>> {
+        bail!("drive enumeration is not implemented on this OS")
+    }
+
+    #[cfg(not(any(target_os = "linux", target_os = "macos")))]
+    fn unmount(_drive: &UsbDrive) -> Result<()> {
+        Ok(())
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::{is_partition_of, parse_diskutil_bytes};
+
+    #[test]
+    fn partition_matching() {
+        assert!(is_partition_of("/dev/sdb", "/dev/sdb"));
+        assert!(is_partition_of("/dev/sdb1", "/dev/sdb"));
+        assert!(is_partition_of("/dev/mmcblk0p2", "/dev/mmcblk0"));
+        assert!(!is_partition_of("/dev/sdba", "/dev/sdb"));
+        assert!(!is_partition_of("/dev/sdc1", "/dev/sdb"));
+        assert!(!is_partition_of("/dev/sdbp", "/dev/sdb"));
+    }
+
+    #[test]
+    fn diskutil_size() {
+        let info = "   Device / Media Name:      SanDisk Cruzer\n   Disk Size:                 15.4 GB (15376318464 Bytes) (exactly 30031872 512-Byte-Units)\n";
+        assert_eq!(parse_diskutil_bytes(info), 15_376_318_464);
+        assert_eq!(parse_diskutil_bytes("nothing"), 0);
     }
 }
