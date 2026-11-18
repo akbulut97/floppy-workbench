@@ -150,3 +150,23 @@ fn read_host_tree_single_file() {
     assert!(!tree[0].is_dir);
     assert_eq!(tree[0].data, b"abc");
 }
+
+#[test]
+fn find_entries_searches_all_folders_case_insensitively() {
+    use floppyctl::fsops::find_entries;
+    let mut img = blank();
+    make_dir(&mut img, "PROGS").unwrap();
+    make_dir(&mut img, "PROGS/OLD").unwrap();
+    add_file_at(&mut img, "", "README.TXT", b"r").unwrap();
+    add_file_at(&mut img, "PROGS", "PART1.NC", b"1").unwrap();
+    add_file_at(&mut img, "PROGS/OLD", "PART2.NC", b"22").unwrap();
+
+    let mut hits: Vec<String> = find_entries(&img, "part").unwrap().into_iter().map(|(p, _)| p).collect();
+    hits.sort();
+    assert_eq!(hits, vec!["PROGS/OLD/PART2.NC", "PROGS/PART1.NC"]);
+
+    let old = find_entries(&img, "old").unwrap();
+    assert_eq!(old.len(), 1);
+    assert!(old[0].1.is_dir);
+    assert!(find_entries(&img, "nothing").unwrap().is_empty());
+}

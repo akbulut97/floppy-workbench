@@ -557,6 +557,50 @@ fn format_one_block(drive_index: u32, index: u32, label: String) -> Result<(), S
     device::write_bank(&drive, index, &img).map_err(|e| e.to_string())
 }
 
+/// One search hit across blocks.
+#[derive(Serialize)]
+struct SearchHit {
+    block: u32,
+    path: String,
+    name: String,
+    size: u64,
+    is_dir: bool,
+}
+
+/// Search file/folder names in the first `count` blocks (case-insensitive).
+#[tauri::command]
+fn search_blocks(
+    window: tauri::Window,
+    drive_index: u32,
+    count: u32,
+    query: String,
+) -> Result<Vec<SearchHit>, String> {
+    let query = query.trim().to_string();
+    if query.is_empty() {
+        return Ok(vec![]);
+    }
+    let drive = find_drive(drive_index)?;
+    let max_banks = (drive.size_bytes / BANK_STRIDE as u64) as u32;
+    let count = count.min(max_banks);
+    let raw = device::read_range(&drive, count as usize * BANK_STRIDE, |done, total| {
+        emit_progress(&window, "read", done, total);
+    })
+    .map_err(|e| e.to_string())?;
+    emit_progress(&window, "done", 0, 0);
+
+    let mut hits = Vec::new();
+    for block in 0..count {
+        let Ok(img) = floppyctl::sfr::extract_bank(&raw, block) else { break };
+        if floppyctl::inspect(img).is_err() {
+            continue; // blank or non-FAT block
+        }
+        for (path, e) in floppyctl::fsops::find_entries(img, &query).unwrap_or_default() {
+            hits.push(SearchHit { block, path, name: e.name, size: e.size, is_dir: e.is_dir });
+        }
+    }
+    Ok(hits)
+}
+
 /// Save one block as a 1.44 MB floppy image file.
 #[tauri::command]
 fn export_bank(drive_index: u32, index: u32, dest: String) -> Result<String, String> {
@@ -659,6 +703,23 @@ fn is_elevated() -> bool {
 fn main() {
     tauri::Builder::default()
         .plugin(tauri_plugin_dialog::init())
+        .setup(|app| {
+            // Watch for USB sticks being plugged in/removed (cheap poll), and tell
+            // the UI to rescan only when something actually changed.
+            let handle = app.handle().clone();
+            std::thread::spawn(move || {
+                let mut last = device::device_fingerprint();
+                loop {
+                    std::thread::sleep(std::time::Duration::from_millis(1500));
+                    let now = device::device_fingerprint();
+                    if now != last {
+                        last = now;
+                        let _ = handle.emit("fw://drives-changed", ());
+                    }
+                }
+            });
+            Ok(())
+        })
         .invoke_handler(tauri::generate_handler![
             list_blocks,
             create_block,
@@ -685,7 +746,8 @@ fn main() {
             format_block_range,
             export_bank,
             import_bank,
-            clone_bank
+            clone_bank,
+            search_blocks
         ])
         .run(tauri::generate_context!())
         .expect("error while running tauri application");

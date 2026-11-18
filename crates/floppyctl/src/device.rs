@@ -76,6 +76,19 @@ pub fn is_elevated() -> bool {
     nix::is_root()
 }
 
+/// A cheap snapshot of attached disks/volumes. It changes when a USB stick is
+/// plugged in or removed, so callers can poll it and only re-enumerate then.
+#[cfg(windows)]
+pub fn device_fingerprint() -> String {
+    let mask = unsafe { windows::Win32::Storage::FileSystem::GetLogicalDrives() };
+    format!("{mask:x}")
+}
+
+#[cfg(not(windows))]
+pub fn device_fingerprint() -> String {
+    nix::device_fingerprint()
+}
+
 /// Index of the first byte where `a` and `b` differ (a length difference counts
 /// at the shorter length), or `None` if they are identical.
 pub fn first_mismatch(a: &[u8], b: &[u8]) -> Option<usize> {
@@ -481,6 +494,25 @@ mod nix {
     use anyhow::{bail, Context, Result};
 
     use super::UsbDrive;
+
+    /// Sorted names of whole-disk device nodes (`/sys/block` on Linux, `/dev/disk*` elsewhere).
+    pub fn device_fingerprint() -> String {
+        let (dir, prefix) = if cfg!(target_os = "linux") {
+            ("/sys/block", "")
+        } else {
+            ("/dev", "disk")
+        };
+        let mut names: Vec<String> = std::fs::read_dir(dir)
+            .map(|rd| {
+                rd.filter_map(|e| e.ok())
+                    .map(|e| e.file_name().to_string_lossy().into_owned())
+                    .filter(|n| n.starts_with(prefix))
+                    .collect()
+            })
+            .unwrap_or_default();
+        names.sort();
+        names.join(",")
+    }
 
     pub fn is_root() -> bool {
         Command::new("id")

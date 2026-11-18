@@ -328,6 +328,9 @@
       .crumbs a:hover { text-decoration: underline; }
       .crumbs .cur { color: var(--text); font-weight: 600; }
       .crumbs .sly { color: var(--muted); margin: 0 1px; }
+      .searchbar { margin-bottom: 14px; gap: 8px; }
+      #readResult tr[data-hit] { cursor: pointer; }
+      #readResult tr[data-hit]:hover { background: var(--panel-2); }
       .rename-input { font: inherit; padding: 2px 6px; min-width: 0; width: 70%; border: 1px solid var(--amber); border-radius: 5px; background: var(--ink); color: var(--text); }
 
       .modal {
@@ -527,6 +530,11 @@
       <section class="tab" id="tab-browse">
         <h2 data-i18n="browse.title">Browse blocks</h2>
         <p class="lead" data-i18n="browse.lead">Each block is one floppy on the USB. Pick a block to see its files, then drag files in.</p>
+
+        <div class="inline searchbar">
+          <input id="searchQ" style="flex: 1; min-width: 0" data-i18n-ph="search.ph" placeholder="Search file and folder names in all blocks…" />
+          <button id="searchBtn" data-i18n="search.btn">Search</button>
+        </div>
 
         <div class="explorer">
           <aside class="blocks-pane">
@@ -753,6 +761,8 @@
           "dyn.formatRangePrompt": "How many blocks to format, starting at block {i}?", "dyn.formatRangeConfirm": "Format blocks {from}–{to} as blank 1.44M floppies? Everything on them is erased.", "dyn.rangeDone": "Blocks {from}–{to} formatted.",
           "bctx.export": "Save as .img…", "bctx.import": "Load .img into block…", "bctx.clone": "Copy to block…",
           "opt.verify": "Verify after writing", "dyn.verifying": "Verifying",
+          "search.ph": "Search file and folder names in all blocks…", "search.btn": "Search", "dyn.searching": "Searching {n} blocks…",
+          "dyn.searchTitle": "Search: “{q}”", "dyn.searchCount": "{n} result(s)", "dyn.noHits": "No block contains “{q}”.",
           "dyn.importTitle": "Choose a floppy image to load", "dyn.importConfirm": "Write {path} into block {i}? Everything on the block is erased.",
           "dyn.importDone": "Image written to block {i} and verified.",
           "dyn.clonePrompt": "Copy block {i} to which block?", "dyn.cloneConfirm": "Copy block {from} onto block {to}? Everything on block {to} is erased.",
@@ -840,6 +850,8 @@
           "dyn.formatRangePrompt": "Blok {i}'den başlayarak kaç blok formatlansın?", "dyn.formatRangeConfirm": "Blok {from}–{to} boş 1.44M disket olarak formatlansın mı? Üzerlerindeki her şey silinir.", "dyn.rangeDone": "Blok {from}–{to} formatlandı.",
           "bctx.export": ".img olarak kaydet…", "bctx.import": "Bloğa .img yükle…", "bctx.clone": "Başka bloğa kopyala…",
           "opt.verify": "Yazdıktan sonra doğrula", "dyn.verifying": "Doğrulanıyor",
+          "search.ph": "Arama: tüm bloklardaki dosya ve klasör adları…", "search.btn": "Ara", "dyn.searching": "{n} blok aranıyor…",
+          "dyn.searchTitle": "Arama: “{q}”", "dyn.searchCount": "{n} sonuç", "dyn.noHits": "“{q}” hiçbir blokta bulunamadı.",
           "dyn.importTitle": "Yüklenecek disket imajını seçin", "dyn.importConfirm": "{path} blok {i}'ye yazılsın mı? Bloktaki her şey silinir.",
           "dyn.importDone": "İmaj blok {i}'ye yazıldı ve doğrulandı.",
           "dyn.clonePrompt": "Blok {i} hangi bloğa kopyalansın?", "dyn.cloneConfirm": "Blok {from}, blok {to} üzerine kopyalansın mı? Blok {to} üzerindeki her şey silinir.",
@@ -921,6 +933,7 @@
       function applyI18n() {
         document.querySelectorAll("[data-i18n]").forEach((el) => { el.textContent = t(el.getAttribute("data-i18n")); });
         document.querySelectorAll("[data-i18n-title]").forEach((el) => { el.title = t(el.getAttribute("data-i18n-title")); });
+        document.querySelectorAll("[data-i18n-ph]").forEach((el) => { el.placeholder = t(el.getAttribute("data-i18n-ph")); });
         if (window.IS_ELEVATED) { const dh = $("dropHint"); if (dh) dh.textContent = t("dyn.dropAdmin"); }
         document.documentElement.lang = LANG;
       }
@@ -962,6 +975,7 @@
           document.querySelectorAll(".tab").forEach((t) => t.classList.remove("active"));
           $("tab-" + btn.dataset.tab).classList.add("active");
           if (btn.dataset.tab === "browse") maybeAutoScan();
+          try { localStorage.setItem("fw_tab", btn.dataset.tab); } catch (e) {}
         });
       });
 
@@ -971,19 +985,30 @@
         const v = $("device").value;
         return v === "" ? NaN : parseInt(v, 10);
       }
+      // Rebuild the device list, keeping the current selection; on first load
+      // re-select the last used drive (matched by index + model).
       async function rescan() {
         const sel = $("device");
+        const prev = sel.value;
+        let saved = "";
+        try { saved = localStorage.getItem("fw_dev") || ""; } catch (e) {}
         try {
           drives = await invoke("list_drives");
           if (!drives.length) {
             sel.innerHTML = `<option value="">${t("dyn.noRemovable")}</option>`;
             $("devDot").className = "dot";
+            if (prev !== "") sel.dispatchEvent(new Event("change"));
             return;
           }
           sel.innerHTML = drives
             .map((d) => `<option value="${d.index}">${d.model} — ${gb(d.size_bytes)}</option>`)
             .join("");
+          const pick = drives.find((d) => String(d.index) === prev)
+            || drives.find((d) => d.index + "|" + d.model === saved)
+            || drives[0];
+          sel.value = String(pick.index);
           $("devDot").className = "dot on";
+          if (sel.value !== prev) sel.dispatchEvent(new Event("change"));
         } catch (e) {
           sel.innerHTML = `<option value="">${t("dyn.error")}</option>`;
           $("devDot").className = "dot";
@@ -991,6 +1016,8 @@
       }
       $("devRefresh").addEventListener("click", rescan);
       $("device").addEventListener("change", () => {
+        const cur = drives.find((x) => String(x.index) === $("device").value);
+        if (cur) { try { localStorage.setItem("fw_dev", cur.index + "|" + cur.model); } catch (e) {} }
         selectedBlock = null;
         currentPath = "";
         selectedNames.clear();
@@ -1517,6 +1544,41 @@
         } catch (e) { list.innerHTML = `<li class="mini-empty">${tErr(e)}</li>`; }
       }
       $("scanBtn").addEventListener("click", scanBlocks);
+
+      // ---- Search across blocks ----
+      const esc = (s) => String(s).replace(/[&<>"]/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" }[c]));
+      async function searchBlocks() {
+        const q = $("searchQ").value.trim();
+        if (!q) return;
+        const driveIndex = selectedDrive();
+        if (isNaN(driveIndex)) { setStatus($("readStatus"), t("dyn.chooseTop"), "err"); return; }
+        const count = parseInt($("blockCount").value, 10) || 100;
+        setStatus($("readStatus"), t("dyn.searching", { n: count }));
+        try {
+          const hits = await invoke("search_blocks", { driveIndex, count, query: q });
+          selectedNames.clear(); updateToolbar();
+          $("crumbs").innerHTML = `<span class="cur">${esc(t("dyn.searchTitle", { q }))}</span>`;
+          $("paneMeta").textContent = t("dyn.searchCount", { n: hits.length });
+          const res = $("readResult");
+          if (!hits.length) { res.innerHTML = `<div class="empty">${esc(t("dyn.noHits", { q }))}</div>`; setStatus($("readStatus"), "", ""); return; }
+          const rows = hits.map((h) => `<tr data-hit data-block="${h.block}" data-path="${esc(h.path)}">` +
+            `<td class="mono">${String(h.block).padStart(3, "0")}</td>` +
+            `<td>${h.is_dir ? "📁" : "📄"}&nbsp; ${esc(h.path)}</td>` +
+            `<td class="num">${h.is_dir ? "" : h.size.toLocaleString()}</td></tr>`).join("");
+          res.innerHTML = `<table><thead><tr><th>${t("dyn.block")}</th><th>${t("col.name")}</th><th class="num">${t("col.bytes")}</th></tr></thead><tbody>${rows}</tbody></table>`;
+          res.querySelectorAll("tr[data-hit]").forEach((tr) => tr.addEventListener("click", () => openHit(parseInt(tr.dataset.block, 10), tr.dataset.path)));
+          setStatus($("readStatus"), "", "");
+        } catch (e) { setStatus($("readStatus"), tErr(e), "err"); }
+      }
+      async function openHit(block, path) {
+        const parent = parentOf(path);
+        const name = path.slice(parent ? parent.length + 1 : 0);
+        await selectBlock(block);
+        if (parent) await browse(parent);
+        selectedNames.clear(); selectedNames.add(name); paintSelection();
+      }
+      $("searchBtn").addEventListener("click", searchBlocks);
+      $("searchQ").addEventListener("keydown", (e) => { if (e.key === "Enter") searchBlocks(); });
       function maybeAutoScan() {
         if (!isNaN(selectedDrive()) && !document.querySelector("#blocksList li[data-index]")) scanBlocks();
       }
@@ -1542,6 +1604,7 @@
 
       const evt = window.__TAURI__.event;
       if (evt && evt.listen) {
+        evt.listen("fw://drives-changed", () => rescan());
         evt.listen("fw://progress", (e) => {
           const p = e.payload || {};
           const bar = $("progress");
@@ -1645,9 +1708,30 @@
       let savedLang = "en";
       try { savedLang = localStorage.getItem("fw_lang") || "en"; } catch (e) {}
       setLang(savedLang);
+
+      // Remember form settings between sessions (per-user convenience).
+      const PERSIST = ["fmtBanks", "fmtPrefix", "fmtStart", "fmtVerify", "fmtQuick", "blockCount", "writeVerify", "bkBanks", "sfrBanks"];
+      const store = (k, v) => { try { localStorage.setItem("fw_set_" + k, v); } catch (e) {} };
+      const load = (k) => { try { return localStorage.getItem("fw_set_" + k); } catch (e) { return null; } };
+      for (const id of PERSIST) {
+        const el = $(id);
+        if (!el) continue;
+        const v = load(id);
+        if (v !== null) { if (el.type === "checkbox") el.checked = v === "1"; else el.value = v; }
+        const save = () => store(id, el.type === "checkbox" ? (el.checked ? "1" : "0") : el.value);
+        el.addEventListener("change", save);
+        el.addEventListener("input", save);
+      }
+      const savedSize = load("fmtSize");
+      if (savedSize) { const r = document.querySelector(`input[name="fmtSize"][value="${savedSize}"]`); if (r) r.checked = true; }
+      document.querySelectorAll('input[name="fmtSize"]').forEach((r) => r.addEventListener("change", () => store("fmtSize", r.value)));
+
       refreshSummary();
       refreshLabelPreview();
       rescan();
+      let savedTab = null;
+      try { savedTab = localStorage.getItem("fw_tab"); } catch (e) {}
+      if (savedTab && savedTab !== "format") { const b = document.querySelector(`nav.tabs button[data-tab="${savedTab}"]`); if (b) b.click(); }
       // Elevated apps can't receive Explorer drag-drop (Windows UIPI) — tell the user.
       invoke("is_elevated").then((adm) => {
         window.IS_ELEVATED = adm;

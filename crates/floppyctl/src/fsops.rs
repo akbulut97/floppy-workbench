@@ -45,6 +45,26 @@ pub fn list_dir(img: &[u8], path: &str) -> Result<Vec<BankFile>> {
     Ok(out)
 }
 
+/// Find every file or folder (in any folder) whose name contains `query`,
+/// case-insensitively. Returns `(full root-relative path, entry)` pairs.
+pub fn find_entries(img: &[u8], query: &str) -> Result<Vec<(String, BankFile)>> {
+    let needle = query.to_lowercase();
+    let mut hits = Vec::new();
+    let mut stack = vec![String::new()];
+    while let Some(dir) = stack.pop() {
+        for e in list_dir(img, &dir)? {
+            let full = join(&dir, &e.name);
+            if e.is_dir {
+                stack.push(full.clone());
+            }
+            if e.name.to_lowercase().contains(&needle) {
+                hits.push((full, e));
+            }
+        }
+    }
+    Ok(hits)
+}
+
 /// Read the contents of the file at `path`.
 pub fn read_file_at(img: &[u8], path: &str) -> Result<Vec<u8>> {
     let fs = FileSystem::new(Cursor::new(img.to_vec()), FsOptions::new())?;
