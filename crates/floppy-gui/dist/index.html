@@ -666,6 +666,7 @@
       <button data-bact="rename" data-i18n="bctx.rename">Rename block…</button>
       <button data-bact="bootable" data-i18n="bctx.bootable">Make bootable (FreeDOS)…</button>
       <button data-bact="format" class="danger-item" data-i18n="bctx.format">Format block…</button>
+      <button data-bact="formatrange" class="danger-item" data-i18n="bctx.formatRange">Format range…</button>
     </div>
 
     <div class="rz rz-n" data-dir="North"></div>
@@ -735,7 +736,8 @@
           "dyn.backingUp": "Backing up {n} banks…", "dyn.backedUp": "Saved {msg}",
           "ctx.open": "Open", "ctx.cut": "Cut", "ctx.copy": "Copy", "ctx.paste": "Paste", "ctx.rename": "Rename",
           "ctx.export": "Export", "ctx.delete": "Delete", "bctx.rename": "Rename block…", "bctx.format": "Format block…",
-          "bctx.bootable": "Make bootable (FreeDOS)…",
+          "bctx.bootable": "Make bootable (FreeDOS)…", "bctx.formatRange": "Format range…",
+          "dyn.formatRangePrompt": "How many blocks to format, starting at block {i}?", "dyn.formatRangeConfirm": "Format blocks {from}–{to} as blank 1.44M floppies? Everything on them is erased.", "dyn.rangeDone": "Blocks {from}–{to} formatted.",
           "dyn.bootableConfirm": "Make block {i} a FreeDOS boot floppy? Everything on it is erased.",
           "dyn.bootLabelPrompt": "Volume label:", "dyn.bootableDone": "Block {i} is now FreeDOS-bootable.",
           "pv.saveAs": "Save as…", "pv.close": "Close", "col.name": "Name", "col.bytes": "Bytes",
@@ -806,7 +808,8 @@
           "dyn.backingUp": "{n} banka yedekleniyor…", "dyn.backedUp": "Kaydedildi: {msg}",
           "ctx.open": "Aç", "ctx.cut": "Kes", "ctx.copy": "Kopyala", "ctx.paste": "Yapıştır", "ctx.rename": "Yeniden adlandır",
           "ctx.export": "Dışa aktar", "ctx.delete": "Sil", "bctx.rename": "Bloğu yeniden adlandır…", "bctx.format": "Bloğu formatla…",
-          "bctx.bootable": "Bootable yap (FreeDOS)…",
+          "bctx.bootable": "Bootable yap (FreeDOS)…", "bctx.formatRange": "Aralığı formatla…",
+          "dyn.formatRangePrompt": "Blok {i}'den başlayarak kaç blok formatlansın?", "dyn.formatRangeConfirm": "Blok {from}–{to} boş 1.44M disket olarak formatlansın mı? Üzerlerindeki her şey silinir.", "dyn.rangeDone": "Blok {from}–{to} formatlandı.",
           "dyn.bootableConfirm": "Blok {i} FreeDOS açılış disketi yapılsın mı? Üzerindeki her şey silinir.",
           "dyn.bootLabelPrompt": "Birim etiketi:", "dyn.bootableDone": "Blok {i} artık FreeDOS ile açılabilir.",
           "pv.saveAs": "Farklı kaydet…", "pv.close": "Kapat", "col.name": "Ad", "col.bytes": "Bayt",
@@ -1308,6 +1311,18 @@
             blockLiLabel(idx, label.toUpperCase(), true);
             if (idx === selectedBlock) { currentPath = ""; browse(""); }
             setStatus($("readStatus"), t("dyn.bootableDone", { i: idx }), "ok");
+          } catch (err) { setStatus($("readStatus"), "" + err, "err"); }
+        } else if (act === "formatrange") {
+          const n = parseInt(prompt(t("dyn.formatRangePrompt", { i: idx }), "10"), 10);
+          if (!n || n < 1) return;
+          const last = idx + n - 1;
+          if (!confirm(t("dyn.formatRangeConfirm", { from: idx, to: last }))) return;
+          setStatus($("readStatus"), t("dyn.working"));
+          try {
+            await invoke("format_block_range", { driveIndex, start: idx, count: n, label: "NO NAME" });
+            for (let i = idx; i <= last; i++) blockLiLabel(i, "NO NAME", true);
+            if (selectedBlock !== null && selectedBlock >= idx && selectedBlock <= last) { currentPath = ""; browse(""); }
+            setStatus($("readStatus"), t("dyn.rangeDone", { from: idx, to: last }), "ok");
           } catch (err) { setStatus($("readStatus"), "" + err, "err"); }
         } else if (act === "format") {
           if (!confirm(t("dyn.formatBlockConfirm", { i: idx }))) return;

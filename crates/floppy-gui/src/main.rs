@@ -565,6 +565,26 @@ fn backup_usb(
     ))
 }
 
+/// Quick-format `count` blocks starting at `start`, all blank 1.44M with `label`.
+/// DESTRUCTIVE. Reports progress per block.
+#[tauri::command]
+fn format_block_range(
+    window: tauri::Window,
+    drive_index: u32,
+    start: u32,
+    count: u32,
+    label: String,
+) -> Result<(), String> {
+    let drive = find_drive(drive_index)?;
+    let img = build_image(fat12::FloppyFormat::F1_44M, &label, 0, &[]).map_err(|e| e.to_string())?;
+    for i in 0..count {
+        device::write_bank(&drive, start + i, &img).map_err(|e| e.to_string())?;
+        emit_progress(&window, "write", (i + 1) as u64, count as u64);
+    }
+    emit_progress(&window, "done", 0, 0);
+    Ok(())
+}
+
 /// Make a single block a FreeDOS-bootable 1.44M floppy (boots to A:\>). DESTRUCTIVE.
 #[tauri::command]
 fn make_bank_bootable(drive_index: u32, index: u32, label: String) -> Result<(), String> {
@@ -605,7 +625,8 @@ fn main() {
             preview_file,
             is_elevated,
             make_bank_bootable,
-            backup_usb
+            backup_usb,
+            format_block_range
         ])
         .run(tauri::generate_context!())
         .expect("error while running tauri application");
